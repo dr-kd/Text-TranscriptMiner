@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use Test::More;
 use File::Slurp;
+BEGIN { use_ok 'Text::InterviewMiner::Document';}
 my @files = @ARGV;
 ok(@files, "passed in a list of files to process");
 done_testing();
