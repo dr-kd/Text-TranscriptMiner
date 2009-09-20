@@ -1,4 +1,4 @@
-package Text::InterviewMiner::Document;
+package Text::TranscriptMiner::Document;
 use Moose;
 use Path::Class;
 use Carp;

@@ -3,7 +3,7 @@
 use Test::More tests => 1;
 
 BEGIN {
-	use_ok( 'Text::InterviewMiner' );
+	use_ok( 'Text::TranscriptMiner' );
 }
 
-diag( "Testing Text::InterviewMiner $Text::InterviewMiner::VERSION, Perl $], $^X" );
+diag( "Testing Text::TranscriptMiner $Text::TranscriptMiner::VERSION, Perl $], $^X" );
