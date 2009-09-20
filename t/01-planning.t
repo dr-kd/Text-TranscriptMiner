@@ -2,20 +2,11 @@
 use Test::More;
 use File::Slurp;
 BEGIN { use_ok 'Text::InterviewMiner::Document';}
-my @files = @ARGV;
-ok(@files, "passed in a list of files to process");
+use FindBin qw/$Bin/;
+my $file = "$Bin/lib/corydoctorow_transcript.txt";
+my $mine = Text::InterviewMiner::Document->new({filename => $file});
+ok((keys %{$mine->info->{interviewer}})[0] eq 'Sara', "got interviewer name");
+ok((keys %{$mine->info->{interviewee}})[0] eq 'Cory', "got interviewee name");
+ok($mine->txt =~ /Sara: \[999\]/, "match beginning of interview ok");
 done_testing();
 
-my $txt = get_file_contents($files[0]);
-my %contents = parse_file_contents($txt);
-
-
-sub get_file_contents {
-    my ($file) = @_;
-    return read_file($file);
-}
-
-sub parse_file_contents {
-    my ($txt) = @_;
-    
-}
