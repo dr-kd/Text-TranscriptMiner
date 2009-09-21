@@ -1,10 +1,10 @@
-package Text::InterviewMiner;
+package Text::DocumentMiner;
 
 use Moose;
 
 =head1 NAME
 
-Text::InterviewMiner - Mine text data from interviews
+Text::DocumentMiner - Mine text data from interviews
 
 =head1 VERSION
 
@@ -17,18 +17,15 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-    use Text::InterviewMiner;
+    use Text::DocumentMiner;
 
-    my $miner = Text::InterviewMiner->new();
+    my $miner = Text::DocumentMiner->new();
     ...
 
 =head1 METHODS
 
 =head1 attributes
 
-=cut
-
-sub code_here {}
 
 =head1 AUTHOR
 
@@ -37,7 +34,7 @@ Kieren Diment, C<< <zarquon at cpan.org> >>
 =head1 BUGS
 
 Please report any bugs or feature requests to C<bug-text-interviewminer at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Text-InterviewMiner>.  I will be notified, and then you'll
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Text-DocumentMiner>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -47,7 +44,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Text::InterviewMiner
+    perldoc Text::DocumentMiner
 
 
 You can also look for information at:
@@ -56,19 +53,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Text-InterviewMiner>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Text-DocumentMiner>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Text-InterviewMiner>
+L<http://annocpan.org/dist/Text-DocumentMiner>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Text-InterviewMiner>
+L<http://cpanratings.perl.org/d/Text-DocumentMiner>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Text-InterviewMiner/>
+L<http://search.cpan.org/dist/Text-DocumentMiner/>
 
 =back
 
@@ -86,4 +83,4 @@ under the same terms as Perl itself.
 
 =cut
 
-1; # End of Text::InterviewMiner
+1; # End of Text::DocumentMiner
