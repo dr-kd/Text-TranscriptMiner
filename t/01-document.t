@@ -27,6 +27,6 @@ my $tags_ref = {
 is_deeply($tags, $tags_ref, "expected tags list matches got tags");
 ok (!$mine->get_tagged_txt('missing'), "nonexistent tag returns undef");
 my $tagged_txt = $mine->get_tagged_txt('q:commons');
-is(scalar(@$tagged_txt) == 3, "got the right number of tags back");
+ok(scalar(@$tagged_txt) == 3, "got the right number of tags back");
 done_testing();
 
