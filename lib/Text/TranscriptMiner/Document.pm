@@ -10,7 +10,6 @@ has 'info'     =>  (isa => 'HashRef', is => 'ro', lazy_build => 1);
 
 sub _build_info {
     my ($self) = @_;
-    $DB::single=1;
     my ($metatxt) = $self->txt =~ /<!--(.*)-->/ms;
     my @metatxt = split /\n+/m, $metatxt;
     my %metadata;
@@ -43,4 +42,25 @@ sub BUILD {
     $self->txt($txt);
 }
 
+sub get_tagged_txt {
+    my ($self, $tag, $txt) = @_;
+    croak "Need to supply a tag" if ! $tag;
+    my $tags = $self->get_all_tags;
+    my $txt = $self->txt if ! $txt;
+    if (! exists $tags->{$tag}) {
+        warn "Tag \"$tag\" is not present in " . $self->filename . "\n";
+        return undef;
+    }
+}
+
+sub get_all_tags {
+    my ($self, $txt) = @_;
+    $txt = $self->txt if ! $txt;
+    my (@tagged_txt) = $txt =~ /\{(\w:\w+)\}/msg;
+    my %tagged_txt;
+    $tagged_txt{$_}++ for @tagged_txt;
+    return \%tagged_txt;
+}
+
+    
 1;
