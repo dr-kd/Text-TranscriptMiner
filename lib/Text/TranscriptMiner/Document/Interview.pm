@@ -5,8 +5,33 @@ extends 'Text::TranscriptMiner::Document';
 =head1 Text::TranscriptMinder::Document::Interview
 
 Subclass of Text::TranscriptMiner::Document specifically for interview
-transcripts.  Doesn't do anything yet.
+transcripts.
 
 =cut
+
+=head1 interviewer()
+
+Convenience method.  Returns array of all interviewers included in
+the keys of the C<<$mine->info->{interviewer}>> hashref
+
+=cut
+
+sub interviewer{
+    my ($self) = @_;
+    return keys %{$self->info->{interviewer}}
+}
+
+=head1 interviewee()
+
+Convenience method.  Returns array of al interviewers included in
+the keys of the C<<$mine->info->{interviewee}>> hashref.
+
+=cut
+
+
+sub interviewee{
+    my ($self) = @_;
+    return keys %{$self->info->{interviewee}}
+}
 
 1;
