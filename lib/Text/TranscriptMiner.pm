@@ -1,10 +1,10 @@
-package Text::DocumentMiner;
+package Text::TranscriptMiner;
 
 use Moose;
 
 =head1 NAME
 
-Text::DocumentMiner - Mine text data from interviews
+Text::TranscriptMiner - Mine text data from interviews and other transcripted speech
 
 =head1 VERSION
 
@@ -17,15 +17,20 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-    use Text::DocumentMiner;
+    use Text::TranscriptMiner;
 
-    my $miner = Text::DocumentMiner->new();
+    my $miner = Text::TranscriptMiner->new();
     ...
 
 =head1 METHODS
 
 =head1 attributes
 
+nothing this is currently a blank class
+
+=cut
+
+has 'nothing' => (isa => 'Str', is => 'ro', required => 1);
 
 =head1 AUTHOR
 
@@ -34,7 +39,7 @@ Kieren Diment, C<< <zarquon at cpan.org> >>
 =head1 BUGS
 
 Please report any bugs or feature requests to C<bug-text-interviewminer at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Text-DocumentMiner>.  I will be notified, and then you'll
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Text-TranscriptMiner>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -44,7 +49,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Text::DocumentMiner
+    perldoc Text::TranscriptMiner
 
 
 You can also look for information at:
@@ -53,19 +58,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Text-DocumentMiner>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Text-TranscriptMiner>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Text-DocumentMiner>
+L<http://annocpan.org/dist/Text-TranscriptMiner>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Text-DocumentMiner>
+L<http://cpanratings.perl.org/d/Text-TranscriptMiner>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Text-DocumentMiner/>
+L<http://search.cpan.org/dist/Text-TranscriptMiner/>
 
 =back
 
@@ -83,4 +88,4 @@ under the same terms as Perl itself.
 
 =cut
 
-1; # End of Text::DocumentMiner
+1; # End of Text::TranscriptMiner

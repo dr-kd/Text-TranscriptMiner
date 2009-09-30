@@ -9,7 +9,9 @@ transcripts.
 
 =cut
 
-=head1 interviewer()
+=head1 METHODS
+
+=head2 interviewer
 
 Convenience method.  Returns array of all interviewers included in
 the keys of the C<<$mine->info->{interviewer}>> hashref
@@ -21,7 +23,7 @@ sub interviewer{
     return keys %{$self->info->{interviewer}}
 }
 
-=head1 interviewee()
+=head2 interviewee
 
 Convenience method.  Returns array of al interviewers included in
 the keys of the C<<$mine->info->{interviewee}>> hashref.
