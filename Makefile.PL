@@ -7,7 +7,13 @@ license  'perl';
 
 build_requires 'Test::More';
 requires 'Moose';
+requires 'MooseX::Types';
 requires 'Path::Class';
+requires 'Tree::Simple';
+requires 'Tree::Simple::Visitor::PathToRoot';
+requires 'Tree::Simple::Visitor::LoadDirectoryTree';
+requires 'aliased';
+
 auto_install;
 
 WriteAll;
