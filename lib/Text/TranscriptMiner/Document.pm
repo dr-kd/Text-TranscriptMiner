@@ -1,12 +1,17 @@
 package Text::TranscriptMiner::Document;
 use Moose;
 use Path::Class;
+use MooseX::Types -declare => [qw/InterviewFile/];
+use MooseX::Types::Moose qw/Str HashRef/;
+
+class_type InterviewFile, { class => 'Path::Class::File'} ;
+coerce InterviewFile, from Str, via { Path::Class::File->new($_)};
+
 use Carp;
 
-has 'txt'      =>  (isa => 'Str', is => 'rw');
-has 'filename' =>  (isa => 'Str', is => 'rw');
-has 'file'     =>  (isa => 'Path::Class::File', is => 'rw');
-has 'info'     =>  (isa => 'HashRef', is => 'ro', lazy_build => 1);
+has 'txt'      =>  (isa => Str, is => 'ro', lazy_build => 1);
+has 'file'     =>  (isa => InterviewFile, is => 'ro');
+has 'info'     =>  (isa => HashRef, is => 'ro', lazy_build => 1);
 
 =head2 _build_info()
 
@@ -32,26 +37,15 @@ sub _build_info {
     return \%metadata;
 }
 
-=head2 sub BUILD
+=head2 _build_txt
 
-Ensures that you either set up the object with the C<file> or C<txt> attribute, but not both, or neither.
+Creates the text representation of the document
 
 =cut
 
-sub BUILD {
+sub _build_txt {
     my ($self) = @_;
-    croak "Can't instantiate with both file and txt\n" if $self->txt && $self->filename;
-    croak "Need to instantiate with either filename or text\n" unless $self->txt|| $self->filename;
-    if ($self->filename) {
-        $self->file(Path::Class::File->new($self->filename));
-    }
-    if (! $self->txt) {
-        $self->txt(scalar($self->file->slurp));
-    }
-    # standardise newlines of txt
-    my $txt = $self->txt;
-    $txt =~ s/(?:\015{1,2}\012|\015|\012)/\n/sg;
-    $self->txt($txt);
+    return $self->file->slurp;
 }
 
 =head2 sub get_tagged_txt($tag, [$txt])
@@ -68,7 +62,7 @@ sub get_tagged_txt {
     my $tags = $self->get_all_tags;
     $txt = $self->txt if ! $txt;
     if (! exists $tags->{$tag}) {
-        warn "Tag \"$tag\" is not present in " . $self->filename . "\n";
+        warn "Tag \"$tag\" is not present in " . $self->file . "\n";
         return undef;
     }
     else {
