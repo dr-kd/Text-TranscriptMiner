@@ -1,0 +1,82 @@
+SGML versus XML
+
+The assumption here is that it's desirable for qualitative researchers to be able to work directly with their raw data in text format, or as raw text linked to media files.
+
+SGML is a better data storage format for qualitative research than XML.  This is why.
+
+An xml document looks like this
+
+<?xml version="1.0"?>
+<note>
+    <to>Tove</to>
+    <from>Jani</from>
+    <heading>Reminder</heading>
+    <body>Don't forget me this weekend!</body>
+</note>
+
+You could represent a coded document for qualitative research in XML like this:
+
+<?xml version="1.0"?>
+<interview>
+
+<p><interviewer>Sara<interviewer>
+<code node="creative commons">Yes, I know...(me blushing furiously and thinking of my recently published A Guide to Creative Commons and Copyright) He makes his books available for download online and people can rework them, adapt them as long as they don't re-sell them or make them available to others for pay. </p>
+
+(Editor's note: And, due to the share-alike license, all derivative works must be released under the same license.)</code>
+
+<code node="copyright">So can you tell us, what does copyfight mean?
+
+<p> <inteviewee>Cory</interviewee>
+It really means re-balancing copyright. It used to be that copyright was something that the average person never used to think about..because copyright only kicked in when you made a copy, and <code node="technology">making a copy involves having a big industrial piece of machinery...you know, a printing press could make a copy.</code> </code>
+</interview>
+
+There are a couple of disadvantages.  Firstly the meaning of the closing </code> tags is not terribly easy to work out at first glance.
+
+Secondly there are problems with the way that the XML specification deal with overlapping codes.  Consider the following fragment:
+
+
+<code node="lyric">
+    <code node="identity">If I were a
+        <code node="song subject">rich man</code>
+        <code node="song">
+                I'd go fallalalalala laa
+        </code>
+    </code>
+    all day long
+</code>
+
+
+This is not valid XML.  The problem is with the ways that the tags overlap.
+
+This is a valid representation of the same xml
+
+<code node="lyric">
+    <code node="identity">If I were a
+        <code node="song subject">rich man</code>
+        </code>
+    <code node="song subject">
+        <code node="song">
+                I'd go fallalalalala laa
+        </code>
+    </code>
+    all day long
+</code>
+
+This is because tags must not overlap.  For example:
+
+<tag1>this is valid xml</tag1>
+<tag1>this is <tag2>valid xml</tag2></tag1>
+<tag1>this is <tag2>not valid xml</tag1></tag2>
+
+Coding must allow the option for overlapping codes, but  to do so using XML is cumbersome and requires working around.
+
+However, SGML, of which XML is a subset allows for overlapping tags:
+
+<tag1>this is <tag2>valid sgml</tag1></tag2>
+
+Also while <tag> </tag> are the required XML delimiters, in SGML you can use arbitrary tag delimeters.
+
+{tag1}this is {tag2}valid {tag3}sgml{/tag1}{/tag2} and is easier to read than xml {/tag3}
+
+SGML data can be transformed into valid XML via a computer should that be desireable, but as a human readable data format, XML has limitations.
+
