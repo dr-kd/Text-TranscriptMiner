@@ -16,6 +16,7 @@ ok($tmc->start_dir->isa('Path::Class::Dir'), "got coerced path::class::dir");
 
 my $tree =  $tmc->doctree;
 ok($tree->isa('Tree::Simple'), "got a Tree::Simple");
-
+my $paths = $tmc->get_files_info;
+diag Dump $paths;
 
 done_testing();
