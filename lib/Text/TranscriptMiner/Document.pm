@@ -45,7 +45,7 @@ Creates the text representation of the document
 
 sub _build_txt {
     my ($self) = @_;
-    return $self->file->slurp;
+    return $self->file->slurp || '';
 }
 
 =head2 sub get_tagged_txt($tag, [$txt])
@@ -99,5 +99,19 @@ sub get_this_tag {
     my (@tagged_txt) = $txt =~ /({$tag}.*?{\/$tag})/sg;
     return \@tagged_txt;
 }
-    
+
+sub get_tags_for_docs {
+    my ($self, @docs) = @_;
+    $DB::single=1;
+    my $tags = {};
+    foreach my $d (@docs) {
+        my $iv = $self->new({file => Path::Class::File->new($d)});
+        my $doctags = $iv->get_all_tags;
+        foreach my $k (keys %$doctags) {
+            $tags->{$k} += $doctags->{$k};
+        }
+    }
+    return $tags;
+}
+
 1;

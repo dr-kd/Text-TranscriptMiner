@@ -8,6 +8,8 @@ use Path::Class;
 use aliased 'Tree::Simple::Visitor::LoadDirectoryTree';
 use Tree::Simple;
 use Tree::Simple::Visitor::PathToRoot;
+use List::MoreUtils qw/all/;
+use Carp;
 
 class_type CorpusDir, { class => 'Path::Class::Dir'} ;
 coerce CorpusDir, from Str, via { Path::Class::Dir->new($_)};
@@ -65,13 +67,59 @@ sub _build_doctree {
     return $tree;
 }
 
+=head2 get_files_info
 
-
-
-=head3 sort_by_mtime
-
-what it says
+Grabs metadata from the file names and paths.  Directory names are assumed to contain information.  File names have words delimited by '_' characters, and only words in all capitals are assumed to be worth collecting;
 
 =cut
 
+
+sub get_files_info {
+    my ($self) = @_;
+    my $nodes = $self->get_subnodes;
+    my $data = {};
+    foreach my $n (@$nodes) {
+        my @data = split '/', $n;
+        my $file = pop @data;
+        $file =~ s/\.txt$//;
+        my @fileinfo = split '_', $file;
+        @fileinfo =  grep { /^[A-Z]+$/ } @fileinfo;
+        $DB::single=1;
+        $data->{$_}++ for (@data, @fileinfo);
+    }
+    return $data;
+}
+
+sub get_subnodes {
+    my ($self, $node, $data) = @_;
+    $node ||= $self->doctree;
+    $data ||= [];
+    foreach my $n ($node->getAllChildren) {
+        $node->accept($self->pathfinder);
+        my $col = $self->pathfinder->getPathAsString('/') . '/' . $n->getNodeValue;
+        $col =~ s/^\///;
+        push @$data, $col;
+        if ($node->getAllChildren) {
+            $self->get_subnodes($n, $data);
+        }
+    }
+    return $data;
+}
+
+sub search_for_subnodes {
+    my ($self, $tags, $doctree) = @_;
+    croak "not an array reference" unless ref($tags) eq 'ARRAY';
+    my @tags;
+    @tags = grep { $_ ne '_remove'} @$tags;
+    my $pages = $self->get_subnodes;
+    my @pages;
+    # if all of @tags are in each $page then add to @pages;
+    foreach my $p (@$pages) {
+        push @pages, $p if (all { $p =~ /$_/} @tags);
+    }
+    return \@pages;
+}
+
 __PACKAGE__->meta->make_immutable;
+
+1;

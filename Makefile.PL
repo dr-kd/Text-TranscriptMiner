@@ -12,6 +12,7 @@ requires 'Path::Class';
 requires 'Tree::Simple';
 requires 'Tree::Simple::Visitor::PathToRoot';
 requires 'Tree::Simple::Visitor::LoadDirectoryTree';
+requires 'List::MoreUtils';
 requires 'aliased';
 
 auto_install;
