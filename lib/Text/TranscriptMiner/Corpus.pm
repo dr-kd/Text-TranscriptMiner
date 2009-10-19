@@ -10,6 +10,7 @@ use Tree::Simple;
 use Tree::Simple::Visitor::PathToRoot;
 use List::MoreUtils qw/all/;
 use Carp;
+use aliased 'Text::TranscriptMiner::Document::Interview';
 
 class_type CorpusDir, { class => 'Path::Class::Dir'} ;
 coerce CorpusDir, from Str, via { Path::Class::Dir->new($_)};
@@ -118,6 +119,12 @@ sub search_for_subnodes {
         push @pages, $p if (all { $p =~ /$_/} @tags);
     }
     return \@pages;
+}
+
+sub get_interviews {
+    my ($self, @docs) = @_;
+    @docs = Interview->new({file => $_}) for @docs;
+    return @docs;
 }
 
 __PACKAGE__->meta->make_immutable;
