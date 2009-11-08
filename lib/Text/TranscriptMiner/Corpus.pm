@@ -85,7 +85,6 @@ sub get_files_info {
         $file =~ s/\.txt$//;
         my @fileinfo = split '_', $file;
         @fileinfo =  grep { /^[A-Z]+$/ } @fileinfo;
-        $DB::single=1;
         $data->{$_}++ for (@data, @fileinfo);
     }
     return $data;

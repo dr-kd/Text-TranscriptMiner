@@ -102,7 +102,6 @@ sub get_this_tag {
 
 sub get_tags_for_docs {
     my ($self, @docs) = @_;
-    $DB::single=1;
     my $tags = {};
     foreach my $d (@docs) {
         my $iv = $self->new({file => Path::Class::File->new($d)});
