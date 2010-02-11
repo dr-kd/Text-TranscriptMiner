@@ -1,0 +1,5 @@
+lib/Text/TranscriptMiner/Summaries.pm
+inc/
+Makefile
+.DS_Store
+META.yml
