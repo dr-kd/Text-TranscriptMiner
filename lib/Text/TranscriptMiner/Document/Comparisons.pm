@@ -1,4 +1,4 @@
-package Text::TranscriptMiner::Comparisons;
+package Text::TranscriptMiner::Document::Comparisons;
 
 use Moose;
 use MooseX::Types -declare => [qw/ SummaryDir Str/];
