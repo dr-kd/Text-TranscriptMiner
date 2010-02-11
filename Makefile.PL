@@ -12,8 +12,10 @@ requires 'Path::Class';
 requires 'Tree::Simple';
 requires 'Tree::Simple::Visitor::PathToRoot';
 requires 'Tree::Simple::Visitor::LoadDirectoryTree';
+requires 'Tree::Simple::WithMetaData';
 requires 'List::MoreUtils';
 requires 'aliased';
+requires 'Regexp::Common';
 
 auto_install;
 
