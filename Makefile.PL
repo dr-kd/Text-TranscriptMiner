@@ -16,6 +16,7 @@ requires 'Tree::Simple::WithMetaData';
 requires 'List::MoreUtils';
 requires 'aliased';
 requires 'Regexp::Common';
+requires 'URI';
 
 auto_install;
 

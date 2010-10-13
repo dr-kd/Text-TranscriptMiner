@@ -6,13 +6,13 @@ use MooseX::Types::Moose qw/Str ArrayRef/;
 use Path::Class;
 use aliased 'Tree::Simple::Visitor::LoadDirectoryTree';
 use Tree::Simple;
-use Tree::Simple::View::ASCII;
 use aliased 'Tree::Simple::WithMetaData';
 use aliased 'Tree::Simple::Visitor::PathToRoot';
 use File::Temp;
 use File::Basename;
 use File::Copy::Recursive qw/dircopy/;
 use Carp;
+use URI;
 
 =head1 Text::TranscriptMiner::Comparisons
 
@@ -79,7 +79,7 @@ has _dir_tree      => (isa => Str,
                        lazy_build => 1,
                    );
 
-has _categories     => (isa => ArrayRef,
+has categories     => (isa => ArrayRef,
                        is  => 'ro',
                        lazy_build => 1,
                    );
@@ -97,7 +97,7 @@ sub _build_comparison {
 
     # warning:  this needs to be made more generic!
     warn "This call is not generic and needs to be fixed";
-    my $start = $self->start_dir->subdir('pre_implementation_first_cut')->subdir('summary');
+    my $start = $self->start_dir->subdir(@{$self->cmp_name});
     
     opendir (my $dh, $start);
     my @cmps = grep { !/^(\.|_)/ && -d $start->subdir("$_") } readdir($dh);
@@ -121,7 +121,7 @@ sub _build__dir_tree {
     foreach (@cmp_names) {
         dircopy($_,$tmpdir);
     }
-
+    $DB::single=1;
     return $tmpdir;
 }
 
@@ -133,7 +133,7 @@ Build the master dir structure
 
 sub _build_summary_tree {
     my ($self) = @_;
-    my $tree = Tree::Simple->new($self->_dir_tree);
+    my $tree = WithMetaData->new($self->_dir_tree);
     my $visitor = LoadDirectoryTree->new();
     $visitor->setSortStyle($visitor->SORT_FILES_FIRST);
     $visitor->setNodeFilter(
@@ -145,18 +145,18 @@ sub _build_summary_tree {
             else { return 0 }
         });
     $tree->accept($visitor);
-    $self->_add_metadata($tree);
+    $tree = $self->_add_metadata($tree);
     return $tree;
 
 }
 
-=head2 _build__categories()
+=head2 _build_categories()
 
 Grab the complete list of categories for the corpus of comparisons
 
 =cut
 
-sub _build__categories {
+sub _build_categories {
     my ($self) = @_;
     my $tree = Tree::Simple->new($self->_dir_tree);
     my $visitor = LoadDirectoryTree->new();
@@ -189,8 +189,10 @@ and
 sub _add_metadata {
     my ($self, $tree) = @_;
     $tree->traverse( sub {
-                         my ($_tree) = @_; $self->_add_metadata_to_node($_tree);
+                         my ($_tree) = @_;
+                         $self->_add_metadata_to_node($_tree);
                      });
+    return $tree;
 }
 
 =head1
@@ -204,28 +206,38 @@ sub _add_metadata_to_node {
     $self->_pathfinder->includeTrunk;
     $node->accept($self->_pathfinder);
     if ($node->getNodeValue eq 'descr.txt') {
-        $node = WithMetaData->new($node);
         my $file = Path::Class::Dir->new($self->_dir_tree)->file($self->_pathfinder->getPath());
         my $rel_path = $self->_pathfinder->getPath();
         my $descr = $file->slurp;
-        chomp($descr);
+                chomp($descr);
         my $source_dir = $file->dir();
+        my $cmps = {};
         foreach my $c (@{$self->comparison}) {
             my $data_dir = $self->start_dir->subdir(@{$self->cmp_name})->subdir($c)->file(@$rel_path)->dir;
-            $node->addMetaData( summary =>  $self->_get_metadata_for_leaf($data_dir));
+            $cmps->{$c} = $self->_get_metadata_for_leaf($data_dir);
         }
+        my $observations = 0;
+        foreach my $cmp (keys %$cmps) {
+            foreach my $obs (keys %{$cmps->{$cmp}}) {
+                $DB::single=1;
+                $observations++ if ref ($cmps->{$cmp}->{$obs}) eq 'ARRAY';
+            }
+        }
+        warn "obs: $observations\n";
+        $node->addMetaData( comparisions => $cmps , description => $descr, observations => $observations);
     }
 }
 
 sub _get_metadata_for_leaf {
     my ($self, $dir) = @_;
     my %data;
-    my $info = [];
-    foreach my $c (@{$self->_categories}) {
-        my $key = (fileparse($c,".txt"))[0];
+    my $info = { };
+    foreach my $c (@{$self->categories}) {
+        my $key = uc((fileparse($c,".txt"))[0]);
+        $info->{$key} = {};
         my $file = $dir->file($c);
         if ( -e $file ) {
-            $info = $self->_get_file_info($file);
+            $info->{$key} = $self->_get_file_info($file);
         }
     }
     return $info;
@@ -239,7 +251,10 @@ sub _get_file_info{
         use Regexp::Common qw/URI/;
         my ($uri, $chunk) = $c =~ /\s*($RE{URI}#\S+)\n*(.*)$/ms;
         my (@bits) = $c  =~  /\n*--\s*(.*?)$/msg;
-        push @$data, { uri => $uri, summary => \@bits };
+        my $snippet_uri = $uri;
+        $snippet_uri =~ s{#}{/};
+        $snippet_uri =~ s{^http://.*?/docs/}{/snippet/};
+        push @$data, { uri => $uri, summary => \@bits, snippet => $snippet_uri } ;
     }
     return $data;
 }
