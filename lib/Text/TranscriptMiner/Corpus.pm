@@ -122,7 +122,6 @@ sub search_for_subnodes {
 
 sub get_interviews {
     my ($self, $start_dir, @docs) = @_;
-    $DB::single=1;
     @docs = map {Interview->new({file => Path::Class::Dir->new($start_dir)->file($_)}) } @docs;
     @docs = grep {$_->txt} @docs;
     return @docs;
