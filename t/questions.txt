@@ -1,0 +1,63 @@
+- Additional comments {q:add}
+- Communication {q:communication}
+	- Find resident information {q:find}
+        - Verbal {q:verbal}
+	- Written {q:written}
+	- Computer {q:computer}
+		- Enhance communication with outside {q:enhance}
+		- Print information out {q:print}
+	- Paper {q:communication_paper}
+- Computer skills {q:skills}
+	- Others {q:others_skills}
+		- Computer illiteracy prevalence {q:illiteracy}
+	- Own {q:own_skills}
+		- Computer at home {q:at_home}
+		- Computer skills - how long {q:length}
+		- Time to use edoc effectively {q:usage}
+		- Time to complete documentation {q:time}
+		- Your computer skils {q:your_skills}
+- Demographic {q:demographic}
+	- Employment duration {q:duration}
+	- Career details {q:career}
+	- Care type - high low secure mixed {q:type}
+	- Name {q:name}
+	- role {q:role}
+		- Usual shift {q:shift}
+	- Staff demographics {q:staff}
+- Documentation practice {q:doc_practice}
+	- Data entry location {q:location}
+	- Documentation time of shift {q:time_shift}
+	- Information documented {q:information}
+	- Paper remaining {q:paper}
+	- Role of documentation {q:doc_role}
+- Edoc opinions {q:opinions}
+	- Benefits {q:benefits}
+	- Clinical impact {q:impact}
+	- Weakneses {q:weakness}
+	- Concerns with edoc {q:concerns}
+	- Edoc start {q:start}
+	- Experience of edoc {q:experience}
+	- Frustrations with edoc {q:frustrations}
+		- System reliability {q:reliability}
+	- Happiest with edoc {q:happiest}
+	- Impact on care {q:care}
+	- Implementation challenges {q:challenges}
+	- Risks of edoc {q:risks}
+	- Used well {q:used_well}
+	- Workstation availability {q:workstation}
+- Resistance
+	- Yours {q:you_resistance}
+	- Others {q:other_resistance}
+- Refusal
+	- Yours {q:you_refusal}
+	- Others {q:other_refusal}
+- Occupational {q:occupational}
+	- Change in work practice {q:practice}
+	- Work environment {q:environment}
+	- Hardest part of job {q:hardest}
+	- Work pattern {q:pattern}
+	- Quality care delivery {q:quality}
+- Training Organisation {q:training}
+	- Training improvements {q:improvements}
+	- Trainer training {q:trainer}
+- Time to stability {q:stable}
