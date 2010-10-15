@@ -121,10 +121,27 @@ sub search_for_subnodes {
 }
 
 sub get_interviews {
-    my ($self, $start_dir, @docs) = @_;
-    @docs = map {Interview->new({file => Path::Class::Dir->new($start_dir)->file($_)}) } @docs;
+    my ($self, $start_dir, $docs) = @_;
+    my @docs = map {Interview->new({file => Path::Class::Dir->new($start_dir)->file($_)}) } @$docs;
     @docs = grep {$_->txt} @docs;
     return @docs;
+}
+
+sub get_all_tags_for_interviews {
+    my ($self, $doctree) = @_;
+    $doctree ||= $self->doctree;
+    my $data = $self->get_subnodes;
+    my @files = grep { -f $self->start_dir->file($_) } @$data;
+    my @docs = $self->get_interviews($self->start_dir, \@files);
+    my %tags;
+    foreach (@docs) {
+        $DB::single=1;
+        my %this_tags = %{$_->get_all_tags()};
+        foreach my $k (keys %this_tags) {
+            $tags{$k} += $this_tags{$k}
+        }
+    }
+    return \%tags;
 }
 
 __PACKAGE__->meta->make_immutable;
