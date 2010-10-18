@@ -169,9 +169,11 @@ sub _get_groups_data_structure {
     };
 
     my ($visit, $v);
-    $v = $visit = $visit = sub { # get $visit in scope through a hack
+    $v = $visit = sub {  # get $visit in scope through a hack.  Could use
+                         # Sub::Current instead.  Might want to do this in the
+                         # situation that this code is called in a more complex
+                         # situation.
         $_[0] ||= 0;
-        $DB::single=1;
         +{ map
                {
                    $_ => $inject->{$_[0]}
@@ -183,7 +185,7 @@ sub _get_groups_data_structure {
                    @{$groups->[$_[0]]}
                };
     };
-    weaken($visit);
+    weaken($visit); # without this we have a memory leak
     my $data_tree = $visit->();
     return $data_tree;
 };
