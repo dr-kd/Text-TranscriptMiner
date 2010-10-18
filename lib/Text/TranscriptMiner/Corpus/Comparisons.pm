@@ -5,7 +5,7 @@ extends 'Text::TranscriptMiner::Corpus';
 use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
-use Sub::Recursive;
+use Scalar::Util qw/weaken/;
 
 
 =head1 DESCRIPTION
@@ -168,21 +168,22 @@ sub _get_groups_data_structure {
         1 => { some_data => 'lvl1' },
     };
 
-    my $visit = recursive {
+    my ($visit, $v);
+    $v = $visit = $visit = sub { # get $visit in scope through a hack
         $_[0] ||= 0;
         $DB::single=1;
         +{ map
                {
                    $_ => $inject->{$_[0]}
-                       ? { %{$inject->{$_[0]}}, children => $REC->($_[0]+1) }
+                       ? { %{$inject->{$_[0]}}, children => $visit->($_[0]+1) }
                        : $_[0] == @$groups
-                           ? $REC->($_[0]+1)
+                           ? $visit->($_[0]+1)
                            : $inject->{-1}
                        }
                    @{$groups->[$_[0]]}
                };
     };
-
+    weaken($visit);
     my $data_tree = $visit->();
     return $data_tree;
 };
