@@ -2,9 +2,11 @@ package Text::TranscriptMiner::Corpus::Comparisons;
 use Moose;
 extends 'Text::TranscriptMiner::Corpus';
 
-use List::MoreUtils qw/any/;
 use Tree::Simple::WithMetaData;
 use File::Basename;
+use Text::TranscriptMiner::CodeTree;
+use Sub::Recursive;
+
 
 =head1 DESCRIPTION
 
@@ -107,6 +109,84 @@ sub get_code_structure {
     my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file);
     return $tree;
 }
+
+=head2 make_comparison_report_tree ($groups [, $code_file])
+
+The real work in this package.  Given an array ref of groups as follows,
+returns the Tree::Simple report of the groups. 
+
+The $groups array ref should look as follows:
+
+   [
+   [ first level categories],
+   [ second level catogeries],
+   [ ... nth level categories],
+   [ last level categories],
+   ]
+
+It will return the tree structure from get_code_structure with the metadata
+slots populated for the report
+
+=cut
+
+sub make_comparison_report_tree {
+    my ($self, $groups, $code_file) = @_;
+    my $doctree = $self->doctree;
+    $groups ||= $self->groups;
+    my $test_groups = [];
+    my $report_tree = $self->get_code_structure($code_file);
+    my $groups_struct = $self->_get_groups_data_structure;
+    $report_tree->traverse( sub {
+                                my ($t) = @_;
+                                $self->addMetaData($groups_struct)
+                            });
+
+    return $test_groups;
+    # return $tree
+}
+
+=head2 sub _get_groups_data_structure()
+
+Get the data structure for gluing onto the end of each node of the code tree
+for countaining the actual data we're eventually interested in.
+
+=cut
+
+
+
+sub _get_groups_data_structure {
+    my ($self, $groups ) = @_;
+    $groups ||= $self->groups;
+
+
+
+    ## this implementation courtesy of ribasushi.  Must acknowledge in the
+    ## paper.
+    my $inject = {
+        -1 => 'leaf',
+        0 => { some_data => 'lvl0' },
+        1 => { some_data => 'lvl1' },
+    };
+
+    my $visit = recursive {
+        $_[0] ||= 0;
+        $DB::single=1;
+        +{ map
+               {
+                   $_ => $inject->{$_[0]}
+                       ? { %{$inject->{$_[0]}}, children => $REC->($_[0]+1) }
+                       : $_[0] == @$groups
+                           ? $REC->($_[0]+1)
+                           : $inject->{-1}
+                       }
+                   @{$groups->[$_[0]]}
+               };
+    };
+
+    my $data_tree = $visit->();
+    return $data_tree;
+};
+
 
 __PACKAGE__->meta->make_immutable;
 1;
