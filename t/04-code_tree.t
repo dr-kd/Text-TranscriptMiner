@@ -7,6 +7,7 @@ use FindBin qw/$Bin/;
 use Tree::Simple::View::ASCII;
 
 use Text::TranscriptMiner::Corpus::Comparisons;
+use Text::TranscriptMiner::CodeTree;
 my $corpus_dir = "$Bin/lib";
 my $corpus = Text::TranscriptMiner::Corpus::Comparisons->new({start_dir => $corpus_dir});
 my $struct_tree = $corpus->get_code_structure;
@@ -18,7 +19,12 @@ my $expected_tree;
       $expected_tree = <DATA>;
 }
 ok ($view->expandAll() eq $expected_tree, "code tree is as expected tree");
-$DB::single=1;
+
+$struct_tree = Text::TranscriptMiner::CodeTree->get_code_tree("$Bin/lib_meta/questions.txt");
+$view = Tree::Simple::View::ASCII->new($struct_tree);
+$view->includeTrunk(0);
+ok ($view->expandAll() eq $expected_tree, "and from the factored out package");
+
 done_testing;
 
 __DATA__

@@ -91,22 +91,8 @@ sub _unique {
 
 Given a file location (or C<<$self->start_dir ../[basename of start_dir]_meta>>
 by default), return a Tree::Simple::WithMetaData of all the wanted codes for
-this analysis run.
+this analysis run via Text::TranscriptMiner::CodeTree
 
-The file structure is one code per line to reflect the tree structure:
-
-  - Code title {code_name}
-   - Another code title below this one {another_code_name}
-  - Code title up one {blah}
-   - Down one {blahblah}
-    - Down two {asdf}
-  - Up to to one above root {etc}
-  - Final code {final}
-
-Delimiting of the tree level can be a single space per level or a single tab
-character per level.  You can mix the two but that would probably be silly.
-
-TODO:  Split this out into its own CPAN module.
 
 =cut
 
@@ -118,58 +104,7 @@ sub get_code_structure {
         $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta")->file("questions.txt");
     }
     die ("no file for codes structure") unless -e $structure_file;
-
-    # now generate the tree with slots for metadata.
-    my $tree = Tree::Simple::WithMetaData
-        ->new('0', Tree::Simple::WithMetaData->ROOT);
-    open my $FH, "<", $structure_file;
-    my $oldlength = 0;
-    my $node = $tree;
-    while (<$FH>) {
-        next if /^#/; # skip comments
-        chomp $_;
-        my ($pos, $name, $code) = $_ =~ /(\s+)?-\s(.*?)(?=\s?\{(.*?)\})/;
-        if (!$name & ! $code) {
-            ($pos, $name ) = $_ =~ /(\s+)?-\s(.*?)$/;
-        }
-        $pos ||='';
-        $pos = length($pos);
-        $code = $name if ! $code;
-        my $newnode = Tree::Simple::WithMetaData->new($code);
-        $newnode->addMetaData( description => $name,
-                               data => { } );
-        if ($pos == $oldlength) { # child to root node, or sibling to non-root
-            if ($node->getDepth() == -1) {
-                $node->addChild($newnode);
-            }
-            else {
-                $node->addSibling($newnode);
-            }
-        }
-        elsif ($pos > $oldlength) { # add child
-            $node->addChild($newnode);
-        }
-        elsif ($pos < $oldlength) { #add sibling to parent
-            if ($node->getDepth() == -1) {
-                $node->addChild($newnode);
-            }
-            else {
-                for ($pos .. ($oldlength - 1 ) ) {
-                    last if $node->getDepth() == -1;
-                    $node = $node->getParent();
-                }
-                if ($node->getDepth() == -1) {
-                    $node->addChild($newnode);
-                }
-                else {
-                    $node->addSibling($newnode);
-                }
-            }
-        }
-        # track position in the tree for next run.
-        $node = $newnode;
-        $oldlength = $pos;
-    }
+    my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file);
     return $tree;
 }
 
