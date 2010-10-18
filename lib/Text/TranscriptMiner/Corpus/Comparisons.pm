@@ -50,5 +50,68 @@ sub _unique {
     return sort keys %names;
 }
 
+sub get_code_structure {
+    my ($self, $structure_file) = @_;
+    if (!$structure_file) {
+        my $startdir = $self->start_dir;
+        $structure_file = basename("$startdir");
+        $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta")->file("questions.txt");
+    }
+    die ("no file for codes structure") unless -e $structure_file;
+
+    # now generate the tree with slots for metadata.
+    my $tree = Tree::Simple::WithMetaData
+        ->new('0', Tree::Simple::WithMetaData->ROOT);
+    open my $FH, "<", $structure_file;
+    my $oldlength = 0;
+    my $node = $tree;
+    while (<$FH>) {
+        next if /^#/; # skip comments
+        chomp $_;
+        my ($pos, $name, $code) = $_ =~ /(\s+)?-\s(.*?)(?=\s?\{(.*?)\})/;
+        if (!$name & ! $code) {
+            ($pos, $name ) = $_ =~ /(\s+)?-\s(.*?)$/;
+        }
+        $pos ||='';
+        $pos = length($pos);
+        $code = $name if ! $code;
+        my $newnode = Tree::Simple::WithMetaData->new($code);
+        $newnode->addMetaData( description => $name,
+                               data => { } );
+        if ($pos == $oldlength) { # child to root node, or sibling to non-root
+            if ($node->getDepth() == -1) {
+                $node->addChild($newnode);
+            }
+            else {
+                $node->addSibling($newnode);
+            }
+        }
+        elsif ($pos > $oldlength) { # add child
+            $node->addChild($newnode);
+        }
+        elsif ($pos < $oldlength) { #add sibling to parent
+            if ($node->getDepth() == -1) {
+                $node->addChild($newnode);
+            }
+            else {
+                for ($pos .. ($oldlength - 1 ) ) {
+                    last if $node->getDepth() == -1;
+                    $node = $node->getParent();
+                }
+                if ($node->getDepth() == -1) {
+                    $node->addChild($newnode);
+                }
+                else {
+                    $node->addSibling($newnode);
+                }
+            }
+        }
+        # track position in the tree for next run.
+        $node = $newnode;
+        $oldlength = $pos;
+    }
+    return $tree;
+}
+
 __PACKAGE__->meta->make_immutable;
 1;
