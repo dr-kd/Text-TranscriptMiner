@@ -90,6 +90,13 @@ sub get_files_info {
     return $data;
 }
 
+=head2 sub get_subnodes ($node [, $data])
+
+Recursive function to get subnodesfrom this part $self->doctree and return as
+an array ref.
+
+=cut
+
 sub get_subnodes {
     my ($self, $node, $data) = @_;
     $node ||= $self->doctree;
@@ -106,6 +113,12 @@ sub get_subnodes {
     return $data;
 }
 
+=head2 sub search_for_subnodes ($tags, $doctree)
+
+get all array ref of $tags present for this list of documents from $doctree
+
+=cut
+
 sub search_for_subnodes {
     my ($self, $tags, $doctree) = @_;
     croak "not an array reference" unless ref($tags) eq 'ARRAY';
@@ -120,12 +133,24 @@ sub search_for_subnodes {
     return \@pages;
 }
 
+=head2 sub get_interviews ($docs)
+
+for an array ref of docs, get all the applicable Test::TranscriptMiner::Interview objects and return in an array
+
+=cut
+
 sub get_interviews {
     my ($self, $start_dir, $docs) = @_;
     my @docs = map {Interview->new({file => Path::Class::Dir->new($start_dir)->file($_)}) } @$docs;
     @docs = grep {$_->txt} @docs;
     return @docs;
 }
+
+=head2 sub get_all_tags_for_interviews($doctree)
+
+get all the tags for a $doctree array of interviews
+
+=cut
 
 sub get_all_tags_for_interviews {
     my ($self, $doctree) = @_;

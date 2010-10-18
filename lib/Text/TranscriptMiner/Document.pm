@@ -100,6 +100,12 @@ sub get_this_tag {
     return \@tagged_txt;
 }
 
+=head2 sub get_tags_for_docs(@docs)
+
+get all tags for a list of files
+
+=cut
+
 sub get_tags_for_docs {
     my ($self, @docs) = @_;
     my $tags = {};
