@@ -135,10 +135,10 @@ sub make_comparison_report_tree {
     $groups ||= $self->groups;
     my $test_groups = [];
     my $report_tree = $self->get_code_structure($code_file);
-    my $groups_struct = $self->_get_groups_data_structure;
+    my %groups_struct = %{$self->_get_groups_data_structure};
     $report_tree->traverse( sub {
                                 my ($t) = @_;
-                                $self->addMetaData($groups_struct)
+                                $self->addMetaData({data =>\%groups_struct})
                             });
 
     return $test_groups;
