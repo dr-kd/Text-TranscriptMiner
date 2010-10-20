@@ -17,6 +17,7 @@ requires 'List::MoreUtils';
 requires 'aliased';
 requires 'Regexp::Common';
 requires 'URI';
+requires 'Data::Leaf::Walker';
 
 auto_install;
 

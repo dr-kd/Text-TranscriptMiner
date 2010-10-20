@@ -17,8 +17,16 @@ if (! -e $corpus_dir) {
 }
 my $corpus = Text::TranscriptMiner::Corpus::Comparisons->new({start_dir => $corpus_dir});
 
-use YAML;
-diag Dump $corpus->_get_groups_data_structure();
-ok(1);
+
+# TODO work out how to test this properly once we have a real data structure
+# meanwhile uncomment the below for debuggery
+ my $data_structure  = $corpus->_get_groups_data_structure();
+# use YAML;
+# diag Dump $corpus->groups;
+ok($corpus->_get_groups_data_structure(), "we got something back");
+
+
+ok($corpus->make_comparison_report_tree());
+
 
 done_testing;
