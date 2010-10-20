@@ -149,6 +149,27 @@ sub make_comparison_report_tree {
 
 Get the data structure for gluing onto the end of each node of the code tree
 for countaining the actual data we're eventually interested in.
+for countaining the actual data we're eventually interested in.  If the return
+value from $self->groups is this:
+
+ [
+   [qw/foo bar/],
+   [qw/a b /],
+   [qw/x y/],
+   ];
+
+then the return value from this method is:
+
+ (
+   'foo' => {
+       'some_data' => 'lvl0',
+       'children' => {'a' => {
+           'some_data' => 'lvl1',
+           'children' => { 'y' => 'leaf', 'x' => 'leaf' } },
+                      'b' => {
+                          'some_data' => 'lvl1',
+                          'children' => {
+                              'y' => 'leaf', 'x' => 'leaf' }}}});
 
 =cut
 
