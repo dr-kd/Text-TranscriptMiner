@@ -6,7 +6,7 @@ use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
 use Scalar::Util qw/weaken/;
-use Data::Leaf::Walker;
+
 
 =head1 DESCRIPTION
 
@@ -135,9 +135,7 @@ sub make_comparison_report_tree {
     $groups ||= $self->groups;
     my $test_groups = [];
     my $report_tree = $self->get_code_structure($code_file);
-
-    # note we don't want the reference here, we want the contents.
-    my %groups_struct = %{$self->_get_groups_data_structure};
+    my $groups_struct = $self->_get_groups_data_structure;
     $report_tree->traverse( sub {
                                 my ($t) = @_;
                                 $t->addMetaData(data => \%groups_struct);
@@ -149,41 +147,10 @@ sub make_comparison_report_tree {
     # return $tree
 }
 
-sub _insert_txt_for_node {
-    my ($self, $leaf_data, $t) = @_;
-    use YAML; warn Dump $leaf_data;
-    my $walker = Data::Leaf::Walker->new($leaf_data);
-    while (my ($key, $val) = $walker->each) {
-        warn join ("/", @$key), "\n";
-    }
-    
-}
-
 =head2 sub _get_groups_data_structure()
 
 Get the data structure for gluing onto the end of each node of the code tree
 for countaining the actual data we're eventually interested in.
-for countaining the actual data we're eventually interested in.  If the return
-value from $self->groups is this:
-
- [
-   [qw/foo bar/],
-   [qw/a b /],
-   [qw/x y/],
-   ];
-
-then the return value from this method is:
-
- (
-   'foo' => {
-       'some_data' => 'lvl0',
-       'children' => {'a' => {
-           'some_data' => 'lvl1',
-           'children' => { 'y' => 'leaf', 'x' => 'leaf' } },
-                      'b' => {
-                          'some_data' => 'lvl1',
-                          'children' => {
-                              'y' => 'leaf', 'x' => 'leaf' }}}});
 
 =cut
 
@@ -198,26 +165,24 @@ sub _get_groups_data_structure {
     ## this implementation courtesy of ribasushi.  Must acknowledge in the
     ## paper.
     my $inject = {
-        -1 => undef,
-        0 => {  },
-        1 => {  },
+        -1 => 'leaf',
+        0 => { some_data => 'lvl0' },
+        1 => { some_data => 'lvl1' },
     };
 
     my ($visit, $v);
-    $v = $visit = sub {  # get $visit in scope through a hack.  Could use
-                         # Sub::Current instead.  Might want to do this in the
-                         # situation that this code is called in a more complex
-                         # situation.
-        my ($index) = @_;
+    $v = $visit = $visit = sub { # get $visit in scope through a hack
+        $_[0] ||= 0;
+        $DB::single=1;
         +{ map
                {
-                   $_ => $inject->{$index}
-                       ?  $visit->($index+1)
-                       : $index > @$groups 
-                           ? $visit->($index+1)
+                   $_ => $inject->{$_[0]}
+                       ? { %{$inject->{$_[0]}}, children => $visit->($_[0]+1) }
+                       : $_[0] == @$groups
+                           ? $visit->($_[0]+1)
                            : $inject->{-1}
                        }
-                   @{$groups->[$index]}
+                   @{$groups->[$_[0]]}
                };
     };
     weaken($visit); # without this we have a memory leak
