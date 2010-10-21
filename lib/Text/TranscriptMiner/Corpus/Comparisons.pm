@@ -5,6 +5,7 @@ extends 'Text::TranscriptMiner::Corpus';
 use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
+use Tree::Simple::Visitor::FindByPath;
 use Scalar::Util qw/weaken/;
 use Data::Leaf::Walker;
 
@@ -142,12 +143,13 @@ sub make_comparison_report_tree {
     my %groups_struct = $self->_get_groups_data_structure;
     $report_tree->traverse( sub {
                                 my ($t) = @_;
-                                $self->_insert_txt_for_node(\%groups_struct, $t);
+                                my $val = $t->getNodeValue();
+                                $self->_insert_txt_for_node(\%groups_struct,
+                                                            $t, $val)
+                                    if $val;
 
                             });
-    
     return $test_groups;
-    # return $tree
 }
 
 =head2 sub _get_groups_data_structure()
@@ -205,14 +207,56 @@ sub _get_groups_data_structure {
 };
 
 sub _insert_txt_for_node {
-    my ($self, $node_data, $t) = @_;
+    my ($self, $node_data, $t, $code) = @_;
     my $walker = Data::Leaf::Walker->new($node_data);
     while (my ($k, $v) = $walker->each) {
+        use YAML;
         @$k = grep { $_ ne 'children'} @$k;
-        my $path = join "/", @$k;
-        warn "PATH: $path\n";
+        my @path = @$k;
+        my $terminal = pop @$k;
+        if (@$k) {
+            my $doctree = $self->doctree;
+            $doctree->traverse(sub {
+                                   my ($_t) = @_;
+                                   my $visitor =
+                                       Tree::Simple::Visitor::FindByPath->new();
+                                   $visitor->includeTrunk(1);
+                                   $visitor
+                                       ->setSearchPath(@$k);
+                                   my $expected = $_t->fetchMetaData('path');
+                                   $_t->accept($visitor);
+                                   use YAML;
+                                   my $docnode = $visitor->getResult();
+                                   if ($docnode) {
+                                       my @kids = $docnode->getAllChildren();
+                                       foreach my $child (@kids) {
+                                           my $val = $child->getNodeValue();
+                                           if ($val =~ /$terminal/) {
+                                               # we need to grab some data.
+                                               my $iview = $child
+                                                   ->fetchMetaData('interview');
+                                               if ($iview) {
+                                                   my $txt = $iview
+                                                       ->get_this_tag($code);
+                                                   use YAML;
+                                                   if (@$txt && @path) {
+                                                       $DB::single=1;
+                                                       pop @path;
+                                                       my $col =
+                                                           $walker->store(\@path, $txt);
+### Work out how to slot data at end of node!  Elusive right now
+                                                       warn Dump $k, $terminal;
+                                                   }
+
+                                               }
+                                           }
+                                       }
+                                   }
+                               });
+        }
     }
 }
+
 
 __PACKAGE__->meta->make_immutable;
 1;

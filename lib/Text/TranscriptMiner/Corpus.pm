@@ -70,7 +70,10 @@ sub _build_doctree {
                         $_t->accept($self->pathfinder);
                         my $file = Path::Class::Dir->new($self->start_dir)
                             ->file($self->pathfinder->getPathAsString('/'));
-                         if (-f $file && -e $file) {
+                        my $path = $self->pathfinder->getPath();
+                        $path ||= [];
+                        $_t->addMetaData(path => $path);
+                        if (-f $file && -e $file) {
                             my $interview = Interview->new({file => $file});
                             $_t->addMetaData(interview => $interview,
                                              file => $file,
