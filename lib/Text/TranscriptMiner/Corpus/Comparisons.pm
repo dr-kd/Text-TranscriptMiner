@@ -28,7 +28,7 @@ Sub for getting the grouping variables from the directory tree containing the co
 
 sub groups {
     my ($self) = @_;
-    return $self->_recursive_get_node_names(0);
+    return $self->_recursive_get_node_names();
 }
 
 =head2 _recursive_get_node_names
@@ -39,6 +39,7 @@ internal sub to do the work for C<groups>
 
 sub _recursive_get_node_names {
     my ($self, $level, $all_levels) = @_;
+    $level ||=0;
     $all_levels ||=[];
     my @this_level;
     my @kids_names;
