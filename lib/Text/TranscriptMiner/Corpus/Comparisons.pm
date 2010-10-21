@@ -66,10 +66,12 @@ internal only sub to get the metadata (person classification stuff) from the met
 
 sub _get_interviews_meta {
     my (@names) = @_;
+    $DB::single=1;
     my @return;
     for (@names) {
         my $return;
         if ($_ =~ /\.txt/) {
+            ($return) = $_ =~ /([[:upper:]]{2,})/;
             push @return, $return if $return;
         }
         else {
