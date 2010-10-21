@@ -21,10 +21,10 @@ my $corpus = Text::TranscriptMiner::Corpus::Comparisons->new({start_dir => $corp
 # TODO work out how to test this properly once we have a real data structure
 # meanwhile uncomment the below for debuggery
 # my $data_structure  = $corpus->_get_groups_data_structure();
-use YAML;
-diag Dump $corpus->groups;
+# use YAML;
+# diag Dump $corpus->groups;
 # ok($corpus->_get_groups_data_structure(), "we got something back");
-# ok($corpus->make_comparison_report_tree());
+my $data_analysis_tree = $corpus->make_comparison_report_tree();
 
 ok(1);
 done_testing;

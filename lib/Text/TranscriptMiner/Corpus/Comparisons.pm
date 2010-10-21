@@ -66,7 +66,6 @@ internal only sub to get the metadata (person classification stuff) from the met
 
 sub _get_interviews_meta {
     my (@names) = @_;
-    $DB::single=1;
     my @return;
     for (@names) {
         my $return;
@@ -157,15 +156,21 @@ sub make_comparison_report_tree {
 Get the data structure for gluing onto the end of each node of the code tree
 for countaining the actual data we're eventually interested in.
 
+=head2 IMPORTANT
+
+This section of code in this method that does the work (the C<$inject> and
+C<$visit> while clever is a bit fragile.  This means that at present the data
+directory (C<<$self->start_dir>) needs to have the data all at equal depths in
+the directory tree.  This will need to be fixed with better code Possibly
+L<CPS|http://search.cpan.org/perldoc?CPS> can help with this kind of recursive
+descent problem.
+
+
 =cut
-
-
 
 sub _get_groups_data_structure {
     my ($self, $groups ) = @_;
     $groups ||= $self->groups;
-
-
 
     ## this implementation courtesy of ribasushi.  Must acknowledge in the
     ## paper.
@@ -202,7 +207,6 @@ sub _insert_txt_for_node {
     my $walker = Data::Leaf::Walker->new($node_data);
     while (my ($k, $v) = $walker->each) {
         my $path = join "/", @$k;
-        warn "$path\n";
     }
 }
 
