@@ -6,7 +6,7 @@ use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
 use Scalar::Util qw/weaken/;
-
+use Data::Leaf::Walker;
 
 =head1 DESCRIPTION
 
@@ -136,7 +136,7 @@ sub make_comparison_report_tree {
     $groups ||= $self->groups;
     my $test_groups = [];
     my $report_tree = $self->get_code_structure($code_file);
-    my $groups_struct = $self->_get_groups_data_structure;
+    my %groups_struct = $self->_get_groups_data_structure;
     $report_tree->traverse( sub {
                                 my ($t) = @_;
                                 $t->addMetaData(data => \%groups_struct);
@@ -165,10 +165,12 @@ sub _get_groups_data_structure {
 
     ## this implementation courtesy of ribasushi.  Must acknowledge in the
     ## paper.
+    my %leaf;
+    @leaf{@{$groups->[$#{$groups}]}} = '';
     my $inject = {
-        -1 => 'leaf',
-        0 => { some_data => 'lvl0' },
-        1 => { some_data => 'lvl1' },
+        -1 => \%leaf,
+        0 => {  },
+        1 => undef,
     };
 
     my ($visit, $v);
@@ -178,7 +180,7 @@ sub _get_groups_data_structure {
         +{ map
                {
                    $_ => $inject->{$_[0]}
-                       ? { %{$inject->{$_[0]}}, children => $visit->($_[0]+1) }
+                       ? { $_ => $visit->($_[0]+1) }
                        : $_[0] == @$groups
                            ? $visit->($_[0]+1)
                            : $inject->{-1}
@@ -187,10 +189,18 @@ sub _get_groups_data_structure {
                };
     };
     weaken($visit); # without this we have a memory leak
-    my $data_tree = $visit->(0);
-    return $data_tree;
+    my $data_tree = $visit->();
+    return %$data_tree;
 };
 
+sub _insert_txt_for_node {
+    my ($self, $node_data, $t) = @_;
+    my $walker = Data::Leaf::Walker->new($node_data);
+    while (my ($k, $v) = $walker->each) {
+        my $path = join "/", @$k;
+        warn "$path\n";
+    }
+}
 
 __PACKAGE__->meta->make_immutable;
 1;
