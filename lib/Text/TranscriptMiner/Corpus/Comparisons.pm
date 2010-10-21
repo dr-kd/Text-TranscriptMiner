@@ -66,15 +66,17 @@ internal only sub to get the metadata (person classification stuff) from the met
 
 sub _get_interviews_meta {
     my (@names) = @_;
+    my @return;
     for (@names) {
+        my $return;
         if ($_ =~ /\.txt/) {
-            $_ =~ /^(?=.*?|_)([[:upper:]]{2,})_?.*?\.txt$/;
-            $_ = $1 if $_;
+            push @return, $return if $return;
+        }
+        else {
+            push @return, $_;
         }
     }
-    @names = grep {defined $_} @names;
-    use YAML;
-    return @names;
+    return @return;
 }
 
 =head2 _unique(@names)
