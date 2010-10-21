@@ -6,7 +6,7 @@ use MooseX::Types::Moose qw/Str/;
 use aliased 'Text::TranscriptMiner::Document::Interview';
 use Path::Class;
 use aliased 'Tree::Simple::Visitor::LoadDirectoryTree';
-use Tree::Simple;
+use Tree::Simple::WithMetaData;
 use Tree::Simple::Visitor::PathToRoot;
 use List::MoreUtils qw/all/;
 use Carp;
@@ -22,7 +22,7 @@ Represents a corpus of transcripts
 =head2 ATTRIBUTES
 
 start_dir (required Path::Class::Dir object or string)
-doctree (hashref created from start_dir)
+doctree (Tree::Simple::WithMetaData created from start_dir)
 
 =head2 METHODS
 
@@ -34,7 +34,7 @@ has start_dir  => (isa => CorpusDir,
                    is => 'ro',
                    coerce => 1,
                    required => 1);
-has doctree    => (isa => 'Tree::Simple',
+has doctree    => (isa => 'Tree::Simple::WithMetaData',
                    is => 'ro',
                    lazy_build => 1);
 has pathfinder => (isa => 'Tree::Simple::Visitor::PathToRoot',
@@ -47,15 +47,15 @@ has pathfinder => (isa => 'Tree::Simple::Visitor::PathToRoot',
 
 =head3 _build_doctree
 
-creates a hashref with the following structure:
+creates a Tree::Simple::WithMetaData of the document tree.
 
-...
+
 
 =cut
 
 sub _build_doctree {
     my ($self) = @_;
-    my $tree = Tree::Simple->new($self->start_dir);
+    my $tree = Tree::Simple::WithMetaData->new($self->start_dir);
     my $visitor = LoadDirectoryTree->new();
     $visitor->setSortStyle($visitor->SORT_FILES_FIRST);
     $visitor->setNodeFilter(
@@ -65,6 +65,18 @@ sub _build_doctree {
             return 1;
         });
     $tree->accept($visitor);
+    $tree->traverse(sub {
+                        my ($_t) = @_;
+                        $_t->accept($self->pathfinder);
+                        my $file = Path::Class::Dir->new($self->start_dir)
+                            ->file($self->pathfinder->getPathAsString('/'));
+                         if (-f $file && -e $file) {
+                            my $interview = Interview->new({file => $file});
+                            $_t->addMetaData(interview => $interview,
+                                             file => $file,
+                                         );
+                        }
+                    });
     return $tree;
 }
 
@@ -102,10 +114,7 @@ sub get_subnodes {
     $node ||= $self->doctree;
     $data ||= [];
     foreach my $n ($node->getAllChildren) {
-        $node->accept($self->pathfinder);
-        my $col = $self->pathfinder->getPathAsString('/') . '/' . $n->getNodeValue;
-        $col =~ s/^\///;
-        push @$data, $col;
+        push @$data, $n;
         if ($node->getAllChildren) {
             $self->get_subnodes($n, $data);
         }

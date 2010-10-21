@@ -15,8 +15,6 @@ $tmc = Text::TranscriptMiner::Corpus->new({start_dir => "$Bin/lib" });
 ok($tmc->start_dir->isa('Path::Class::Dir'), "got coerced path::class::dir");
 
 my $tree =  $tmc->doctree;
-ok($tree->isa('Tree::Simple'), "got a Tree::Simple");
-my $paths = $tmc->get_files_info;
-diag Dump $paths;
+ok($tree->isa('Tree::Simple::WithMetaData'), "got a Tree::Simple::WithMetaData");
 
 done_testing();

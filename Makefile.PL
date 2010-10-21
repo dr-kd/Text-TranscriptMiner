@@ -13,6 +13,7 @@ requires 'Tree::Simple';
 requires 'Tree::Simple::Visitor::PathToRoot';
 requires 'Tree::Simple::Visitor::LoadDirectoryTree';
 requires 'Tree::Simple::WithMetaData';
+requires 'Tree::Simple::Visitor::FindByPath';
 requires 'List::MoreUtils';
 requires 'aliased';
 requires 'Regexp::Common';
