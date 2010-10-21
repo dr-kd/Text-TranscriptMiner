@@ -142,7 +142,6 @@ sub make_comparison_report_tree {
     my %groups_struct = $self->_get_groups_data_structure;
     $report_tree->traverse( sub {
                                 my ($t) = @_;
-                                $t->addMetaData(data => \%groups_struct);
                                 $self->_insert_txt_for_node(\%groups_struct, $t);
 
                             });
@@ -159,11 +158,10 @@ for countaining the actual data we're eventually interested in.
 =head2 IMPORTANT
 
 This section of code in this method that does the work (the C<$inject> and
-C<$visit> while clever is a bit fragile.  This means that at present the data
-directory (C<<$self->start_dir>) needs to have the data all at equal depths in
-the directory tree.  This will need to be fixed with better code Possibly
-L<CPS|http://search.cpan.org/perldoc?CPS> can help with this kind of recursive
-descent problem.
+C<$visit> while clever is a bit fragile.  At present this means that we remove
+all C<children> keys in the C<_insert_txt_for_node> method.  This may need to
+be fixed with better code Possibly L<CPS|http://search.cpan.org/perldoc?CPS>
+can help with this kind of recursive descent problem.
 
 
 =cut
@@ -176,20 +174,23 @@ sub _get_groups_data_structure {
     ## paper.
     my %leaf;
     @leaf{@{$groups->[$#{$groups}]}} = '';
+
     my $inject = {
         -1 => \%leaf,
-        0 => {  },
-        1 => undef,
+        0 => \%leaf,
+        1 => \%leaf,
     };
 
     my ($visit, $v);
-    $v = $visit = $visit = sub { # get $visit in scope through a hack
+    $v = $visit = sub {  # get $visit in scope through a hack.  Could use
+                         # Sub::Current instead.  Might want to do this in the
+                         # situation that this code is called in a more complex
+                         # situation.
         $_[0] ||= 0;
-        $DB::single=1;
         +{ map
                {
                    $_ => $inject->{$_[0]}
-                       ? { $_ => $visit->($_[0]+1) }
+                       ? { %{$inject->{$_[0]}}, children => $visit->($_[0]+1) }
                        : $_[0] == @$groups
                            ? $visit->($_[0]+1)
                            : $inject->{-1}
@@ -197,6 +198,7 @@ sub _get_groups_data_structure {
                    @{$groups->[$_[0]]}
                };
     };
+
     weaken($visit); # without this we have a memory leak
     my $data_tree = $visit->();
     return %$data_tree;
@@ -206,7 +208,9 @@ sub _insert_txt_for_node {
     my ($self, $node_data, $t) = @_;
     my $walker = Data::Leaf::Walker->new($node_data);
     while (my ($k, $v) = $walker->each) {
+        @$k = grep { $_ ne 'children'} @$k;
         my $path = join "/", @$k;
+        warn "PATH: $path\n";
     }
 }
 
