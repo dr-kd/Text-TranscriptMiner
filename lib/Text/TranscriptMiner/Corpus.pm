@@ -10,6 +10,8 @@ use Tree::Simple::WithMetaData;
 use Tree::Simple::Visitor::PathToRoot;
 use List::MoreUtils qw/all/;
 use Carp;
+use File::Find;
+use List::Util qw/max/;
 use aliased 'Text::TranscriptMiner::Document::Interview';
 
 class_type CorpusDir, { class => 'Path::Class::Dir'} ;
@@ -67,6 +69,9 @@ sub _build_doctree {
     $tree->accept($visitor);
     $tree->traverse(sub {
                         my ($_t) = @_;
+                        if ($_t->isRoot()) {
+                            $_t->addMetaData('most_recent_mtime' => $self->get_most_recent_mtime());
+                        }
                         $_t->accept($self->pathfinder);
                         my $file = Path::Class::Dir->new($self->start_dir)
                             ->file($self->pathfinder->getPathAsString('/'));
@@ -81,6 +86,28 @@ sub _build_doctree {
                         }
                     });
     return $tree;
+}
+
+=head2 get_most_recent_mtime
+
+Find the mtime for the most recently modified file in the doctree
+
+=cut
+
+sub get_most_recent_mtime {
+    my ($self) = @_;
+    my $start_dir = $self->start_dir;
+    my @mtimes;
+    find ( sub {
+               my $file = $_;
+               return unless $_ =~ /.txt$/;
+               $DB::single=1;
+               $file = $self->start_dir->file($file);
+               return if ! -e $file;
+               warn "FILE: $_\n";
+               push @mtimes, $file->stat->mtime;
+           }, "$start_dir");
+    return max(@mtimes);
 }
 
 =head2 get_files_info
