@@ -1,13 +1,15 @@
 package Text::TranscriptMiner::Corpus::Comparisons;
 use Moose;
 extends 'Text::TranscriptMiner::Corpus';
-
+use YAML;
 use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
 use Tree::Simple::Visitor::FindByPath;
 use Scalar::Util qw/weaken/;
+use List::MoreUtils qw/any/;
 use Data::Leaf::Walker;
+use List::Compare;
 
 =head1 DESCRIPTION
 
@@ -144,12 +146,13 @@ sub make_comparison_report_tree {
     $report_tree->traverse( sub {
                                 my ($t) = @_;
                                 my $val = $t->getNodeValue();
-                                $self->_insert_txt_for_node(\%groups_struct,
-                                                            $t, $val)
+
+                                $t->addMetaData(
+                                    'node_data' => $self->_get_txt_for_node(\%groups_struct,$t, $val))
                                     if $val;
 
                             });
-    return $test_groups;
+    return $report_tree;
 }
 
 =head2 sub _get_groups_data_structure()
@@ -161,7 +164,7 @@ for countaining the actual data we're eventually interested in.
 
 This section of code in this method that does the work (the C<$inject> and
 C<$visit> while clever is a bit fragile.  At present this means that we remove
-all C<children> keys in the C<_insert_txt_for_node> method.  This may need to
+all C<children> keys in the C<_get_txt_for_node> method.  This may need to
 be fixed with better code Possibly L<CPS|http://search.cpan.org/perldoc?CPS>
 can help with this kind of recursive descent problem.
 
@@ -178,9 +181,9 @@ sub _get_groups_data_structure {
     @leaf{@{$groups->[$#{$groups}]}} = '';
 
     my $inject = {
-        -1 => \%leaf,
-        0 => \%leaf,
-        1 => \%leaf,
+        -1 => {%{\%leaf}},
+        0 =>  {%{\%leaf}},
+        1 =>  {%{\%leaf}},
     };
 
     my ($visit, $v);
@@ -206,56 +209,52 @@ sub _get_groups_data_structure {
     return %$data_tree;
 };
 
-sub _insert_txt_for_node {
+sub _get_txt_for_node {
     my ($self, $node_data, $t, $code) = @_;
     my $walker = Data::Leaf::Walker->new($node_data);
     while (my ($k, $v) = $walker->each) {
-        use YAML;
-        @$k = grep { $_ ne 'children'} @$k;
-        my @path = @$k;
-        my $terminal = pop @$k;
-        if (@$k) {
-            my $doctree = $self->doctree;
-            $doctree->traverse(sub {
-                                   my ($_t) = @_;
-                                   my $visitor =
-                                       Tree::Simple::Visitor::FindByPath->new();
-                                   $visitor->includeTrunk(1);
-                                   $visitor
-                                       ->setSearchPath(@$k);
-                                   my $expected = $_t->fetchMetaData('path');
-                                   $_t->accept($visitor);
-                                   use YAML;
-                                   my $docnode = $visitor->getResult();
-                                   if ($docnode) {
-                                       my @kids = $docnode->getAllChildren();
-                                       foreach my $child (@kids) {
-                                           my $val = $child->getNodeValue();
-                                           if ($val =~ /$terminal/) {
-                                               # we need to grab some data.
-                                               my $iview = $child
-                                                   ->fetchMetaData('interview');
-                                               if ($iview) {
-                                                   my $txt = $iview
-                                                       ->get_this_tag($code);
-                                                   use YAML;
-                                                   if (@$txt && @path) {
-                                                       $DB::single=1;
-                                                       pop @path;
-                                                       my $col =
-                                                           $walker->store(\@path, $txt);
-### Work out how to slot data at end of node!  Elusive right now
-                                                       warn Dump $k, $terminal;
-                                                   }
+        $v = [] if !$v;
+        next unless any {$_ eq 'children'} @$k;
+        my @wanted_path = @$k;
+        @wanted_path = grep { $_ ne 'children'} @wanted_path;
+        my $wanted_type = pop(@wanted_path);
+        my $doctree = $self->doctree;
+        $doctree->traverse(sub {
+                               my ($_t) = @_;
 
-                                               }
-                                           }
-                                       }
-                                   }
-                               });
-        }
+                               ### STYLE WARNING.  rather than nexted if
+                               # statements, we just retun if a condition is
+                               # not met repeatedly.  This reduces the amount
+                               # of indentation in callback sub and keeps it
+                               # perl debugger friendly.
+
+                               # bail if wer're not on  a leaf
+                               my $iview = $_t->fetchMetaData('interview');
+                               return unless $iview;
+                               my @this_path = @{$_t->fetchMetaData('path')};
+                               # check we have the right kind of entry
+                               return unless $_t->getNodeValue =~ /$wanted_type/;
+                               # check we're on the right doc node
+                               my @this = @this_path[0 .. $#this_path-1];
+                               my $lc = List::Compare->new('--unsorted', \@wanted_path,
+                                                           \@this);
+                               return unless $lc->is_LequivalentR();
+
+                               
+                               my $txt = $iview->get_this_tag($code);
+                               return unless @$txt;
+
+                               # we want the data here.
+                               my $data = {
+                                   path => $_t->fetchMetaData('path'),
+                                   text => $txt,
+                                        };
+                               push @$v, $data;
+                           });
     }
+    return $node_data;
 }
+
 
 
 __PACKAGE__->meta->make_immutable;

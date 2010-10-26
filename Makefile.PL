@@ -19,6 +19,7 @@ requires 'aliased';
 requires 'Regexp::Common';
 requires 'URI';
 requires 'Data::Leaf::Walker';
+requires 'List::Compare';
 
 auto_install;
 
