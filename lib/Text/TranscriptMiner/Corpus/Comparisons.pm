@@ -12,6 +12,8 @@ use Scalar::Util qw/weaken/;
 use List::MoreUtils qw/any/;
 use Data::Leaf::Walker;
 use List::Compare;
+use XML::Writer::String;
+use XML::Writer;
 
 =head1 DESCRIPTION
 
@@ -159,7 +161,6 @@ sub make_comparison_report_tree {
                                 my $val = $t->getNodeValue();
                                 my %groups_struct = $self->_get_groups_data_structure($groups);
                                 my $node_data = $self->_get_txt_for_node(\%groups_struct, $t, $val);
-                                $DB::single=1;
                                 $t->addMetaData(
                                     'node_data' => $node_data)
                                     if $val;
@@ -274,6 +275,9 @@ sub _get_groups_data_structure {
 sub _get_txt_for_node {
     my ($self, $node_data, $t, $code) = @_;
     my $walker = Data::Leaf::Walker->new($node_data);
+    my $s = XML::Writer::String->new;
+    my $writer = XML::Writer->new(OUTPUT => $s);
+    $writer->startTag($code);
     while (my ($k, $v) = $walker->each) {
         $v = [] if !$v;
         next unless any {$_ eq 'children'} @$k;
@@ -301,21 +305,28 @@ sub _get_txt_for_node {
                                my $lc = List::Compare->new('--unsorted', \@wanted_path,
                                                            \@this);
                                return unless $lc->is_LequivalentR();
-
-                               my $txt = { $code => $iview->get_this_tag($code)};
-                               return unless @{$txt->{$code}};
-
-                               # we want the data here.
-                               my $data = {
-                                   path => $_t->fetchMetaData('path'),
-                                   text => $txt,
-                                        };
-                               push @$v, $data;
-                               $walker->store($k, $data);
-                               $node_data = $node_data;
+                               my $txt = $iview->get_this_tag($code);
+                               return unless @$txt;
+                               my @closing_tags;
+                               while (@wanted_path) {
+                                   my $branch = shift @wanted_path;
+                                   $writer->startTag($branch);
+                                   push @closing_tags, $branch;
+                               }
+                               $writer->startTag($wanted_type);
+                               foreach my $t (@$txt) {
+                                   $writer->startTag('text');
+                                   $writer->characters($t);
+                                   $writer->endTag('text');
+                               }
+                               $writer->endTag($wanted_type);
+                               while (@closing_tags) {
+                                   my $close = pop @closing_tags;
+                                   $writer->endTag($close);
+                               }
                            });
     }
-    return $node_data;
+    return $s->value;
 }
 
 
