@@ -101,10 +101,8 @@ sub get_most_recent_mtime {
     find ( sub {
                my $file = $_;
                return unless $_ =~ /.txt$/;
-               $DB::single=1;
                $file = $self->start_dir->file($file);
                return if ! -e $file;
-               warn "FILE: $_\n";
                push @mtimes, $file->stat->mtime;
            }, "$start_dir");
     return max(@mtimes);

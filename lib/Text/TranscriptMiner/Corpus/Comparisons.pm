@@ -2,6 +2,8 @@ package Text::TranscriptMiner::Corpus::Comparisons;
 use Moose;
 extends 'Text::TranscriptMiner::Corpus';
 use YAML;
+use Storable qw/nstore retrieve/;
+use Digest::MD5 qw/md5_hex/;
 use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
@@ -96,6 +98,15 @@ sub _unique {
     return sort keys %names;
 }
 
+sub get_meta_start_dir {
+    my ($self) = @_;
+    my $startdir = $self->start_dir;
+    my $structure_file = basename("$startdir");
+    $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta");
+    die if ! -e $structure_file;
+    return $structure_file;
+}
+
 =head2 sub get_code_structure
 
 Given a file location (or C<<$self->start_dir ../[basename of start_dir]_meta>>
@@ -108,9 +119,7 @@ this analysis run via Text::TranscriptMiner::CodeTree
 sub get_code_structure {
     my ($self, $structure_file) = @_;
     if (!$structure_file) {
-        my $startdir = $self->start_dir;
-        $structure_file = basename("$startdir");
-        $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta")->file("questions.txt");
+        $structure_file = $self->get_meta_start_dir->file('questions.txt');
     }
     die ("no file for codes structure") unless -e $structure_file;
     my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file);
@@ -138,21 +147,74 @@ slots populated for the report
 
 sub make_comparison_report_tree {
     my ($self, $groups, $code_file) = @_;
-    my $doctree = $self->doctree;
+    $code_file ||= $self->get_meta_start_dir->file('questions.txt');
     $groups ||= $self->groups;
-    my $test_groups = [];
+    my $cached_report = $self->find_cached_report_tree($groups, $code_file);
+    return $cached_report->{data} if $cached_report;
+
     my $report_tree = $self->get_code_structure($code_file);
-    my %groups_struct = $self->_get_groups_data_structure;
+    my $doctree = $self->doctree;
     $report_tree->traverse( sub {
                                 my ($t) = @_;
                                 my $val = $t->getNodeValue();
-
+                                my %groups_struct = $self->_get_groups_data_structure($groups);
+                                my $node_data = $self->_get_txt_for_node(\%groups_struct, $t, $val);
+                                $DB::single=1;
                                 $t->addMetaData(
-                                    'node_data' => $self->_get_txt_for_node(\%groups_struct,$t, $val))
+                                    'node_data' => $node_data)
                                     if $val;
 
                             });
+    $self->cache_report_tree($groups, $code_file, $report_tree);
     return $report_tree;
+}
+
+=head2 sub _cache_file ($groups, $code_file)
+
+Utility sub to get the cached file
+
+=cut
+
+sub _cache_file {
+    my ($self, $groups, $code_file) = @_;
+    $code_file ||= 'default';
+    my $cache_dir = $self->get_meta_start_dir->subdir('cache');
+    mkdir $cache_dir if !-e $cache_dir;
+    my $storage_data = { groups => $groups,
+                         code_file => "$code_file"};
+    my $storage_file = md5_hex(Dump $storage_data);
+    return ($cache_dir->file($storage_file), $storage_data);
+    
+}
+
+=head2 sub find_cached_report_tree ($groups, $code_file)
+
+Get the cached report tree if it exists and is still valid.
+
+=cut
+
+sub find_cached_report_tree {
+    my ($self, $groups, $code_file) = @_;
+    my $most_recent_mtime = $self->get_most_recent_mtime;
+    $most_recent_mtime ||=0;
+    my ($cache_file, $cache_metadata) = $self->_cache_file($groups, $code_file);
+    my $data = undef;
+    if ( -e $cache_file && $cache_file->stat->mtime >= $most_recent_mtime) {
+        $data = retrieve("$cache_file");
+    }
+    return $data;
+}
+
+=head2 cache_report_tree ($groups, $code_file, $data)
+
+cache the report tree
+
+=cut
+
+sub cache_report_tree {
+    my ($self, $groups, $code_file, $data) = @_;
+    my ($cache_file, $cache_metadata) = $self->_cache_file($groups, $code_file);
+    nstore {data => $data, search_info => $cache_metadata}, "$cache_file";
 }
 
 =head2 sub _get_groups_data_structure()
@@ -222,7 +284,7 @@ sub _get_txt_for_node {
         $doctree->traverse(sub {
                                my ($_t) = @_;
 
-                               ### STYLE WARNING.  rather than nexted if
+                               ### STYLE WARNING.  rather than nested if
                                # statements, we just retun if a condition is
                                # not met repeatedly.  This reduces the amount
                                # of indentation in callback sub and keeps it
@@ -240,9 +302,8 @@ sub _get_txt_for_node {
                                                            \@this);
                                return unless $lc->is_LequivalentR();
 
-                               
-                               my $txt = $iview->get_this_tag($code);
-                               return unless @$txt;
+                               my $txt = { $code => $iview->get_this_tag($code)};
+                               return unless @{$txt->{$code}};
 
                                # we want the data here.
                                my $data = {
@@ -250,6 +311,8 @@ sub _get_txt_for_node {
                                    text => $txt,
                                         };
                                push @$v, $data;
+                               $walker->store($k, $data);
+                               $node_data = $node_data;
                            });
     }
     return $node_data;
