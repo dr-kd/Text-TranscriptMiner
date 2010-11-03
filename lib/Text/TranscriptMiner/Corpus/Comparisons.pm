@@ -160,7 +160,8 @@ sub make_comparison_report_tree {
                                 my ($t) = @_;
                                 my $val = $t->getNodeValue();
                                 my %groups_struct = $self->_get_groups_data_structure($groups);
-                                my $node_data = $self->_get_txt_for_node(\%groups_struct, $t, $val);
+                                my $code_tree_data = \%groups_struct;
+                                my $node_data = $self->_get_txt_for_node(\%groups_struct, {}, $t, $val);
                                 $t->addMetaData(
                                     'node_data' => $node_data)
                                     if $val;
@@ -273,11 +274,8 @@ sub _get_groups_data_structure {
 };
 
 sub _get_txt_for_node {
-    my ($self, $node_data, $t, $code) = @_;
-    my $walker = Data::Leaf::Walker->new($node_data);
-    my $s = XML::Writer::String->new;
-    my $writer = XML::Writer->new(OUTPUT => $s);
-    $writer->startTag($code);
+    my ($self, $code_tree_data, $node_data, $t, $code) = @_;
+    my $walker = Data::Leaf::Walker->new($code_tree_data);
     while (my ($k, $v) = $walker->each) {
         $v = [] if !$v;
         next unless any {$_ eq 'children'} @$k;
@@ -305,29 +303,40 @@ sub _get_txt_for_node {
                                my $lc = List::Compare->new('--unsorted', \@wanted_path,
                                                            \@this);
                                return unless $lc->is_LequivalentR();
-                               my $txt = $iview->get_this_tag($code);
-                               return unless @$txt;
-                               my @closing_tags;
-                               while (@wanted_path) {
-                                   my $branch = shift @wanted_path;
-                                   $writer->startTag($branch);
-                                   push @closing_tags, $branch;
-                               }
-                               $writer->startTag($wanted_type);
-                               foreach my $t (@$txt) {
-                                   $writer->startTag('text');
-                                   $writer->characters($t);
-                                   $writer->endTag('text');
-                               }
-                               $writer->endTag($wanted_type);
-                               while (@closing_tags) {
-                                   my $close = pop @closing_tags;
-                                   $writer->endTag($close);
-                               }
+                               my $txt = { $code => $iview->get_this_tag($code)};
+                               return unless @{$txt->{$code}};
+
+                               # we want the data here.
+                               my $data = {
+                                   path => \@this_path,
+                                   text => $txt,
+                                        };
+                               push @$v, $data;
+                               $DB::single=1;
+                               $node_data = $self->insert_node([@this_path, $wanted_type], $node_data, $v);
+                               $node_data = $node_data;
+
                            });
     }
-    return $s->value;
+    return $node_data;
 }
+
+sub insert_node {
+    my ($self, $path, $data, $leaf_data) = @_;
+    $path = [$path] if !ref($path);
+    my $this_level = $data;
+    foreach my $p (@$path) {
+        $this_level->{$p} = {} unless exists $this_level->{$p};
+        $this_level = $this_level->{$p};
+}
+    my $walker = Data::Leaf::Walker->new($data);
+    my $old_data = $walker->fetch($path);
+    $old_data = [] unless ref($old_data) eq 'ARRAY';
+    push @$old_data, $leaf_data;
+    $walker->store($path, $old_data);
+    return $data;
+}
+
 
 
 

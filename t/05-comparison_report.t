@@ -24,9 +24,10 @@ my $corpus = Text::TranscriptMiner::Corpus::Comparisons->new({start_dir => $corp
 # use YAML;
 # diag Dump $corpus->groups;
 # ok($corpus->_get_groups_data_structure(), "we got something back");
+# diag ref($corpus->_get_groups_data_structure());
 # my $data_analysis_tree = $corpus->make_comparison_report_tree();
 
-use YAML;
+# use YAML;
 $corpus->make_comparison_report_tree;
 
 ok(1);
