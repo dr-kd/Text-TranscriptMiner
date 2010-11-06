@@ -8,6 +8,7 @@ use Path::Class;
 use aliased 'Tree::Simple::Visitor::LoadDirectoryTree';
 use Tree::Simple::WithMetaData;
 use Tree::Simple::Visitor::PathToRoot;
+use aliased 'Tree::Simple::Visitor::FindByPath';
 use List::MoreUtils qw/all/;
 use Carp;
 use File::Find;
@@ -197,13 +198,21 @@ sub get_all_tags_for_interviews {
     my @docs = $self->get_interviews($self->start_dir, \@files);
     my %tags;
     foreach (@docs) {
-        $DB::single=1;
         my %this_tags = %{$_->get_all_tags()};
         foreach my $k (keys %this_tags) {
             $tags{$k} += $this_tags{$k}
         }
     }
     return \%tags;
+}
+
+sub get_this_branch {
+    my ($self, $path) = @_;
+    my $visitor = FindByPath->new();
+    $visitor->includeTrunk(0);
+    $visitor->setSearchPath(@$path);
+    $self->doctree->accept($visitor);
+    return $visitor->getResult();
 }
 
 __PACKAGE__->meta->make_immutable;

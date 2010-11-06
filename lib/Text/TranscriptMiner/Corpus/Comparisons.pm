@@ -150,5 +150,35 @@ sub make_comparison_report_tree {
     return $report_tree;
 }
 
+=head2 sub get_results_for_node($path)
+
+Given a path of the following format:
+
+[ code_name, (path down dir tree), (match for terminal node) ] return the text
+for that node as an array ref.
+
+=cut
+
+sub get_results_for_node{
+    my ($self, $path) = @_;
+    my $code = shift @$path;
+    my $terminal = pop @$path;
+    my $branch = $self->get_this_branch($path);
+    my @docs;
+    
+    $branch->traverse(
+        sub {
+            my ($t) = @_;
+            push @docs, $t->fetchMetaData('interview')
+                if $t->getNodeValue =~ /(^|_|\.)$terminal(_|\.)/;
+        }) if $branch;
+    my $result = [];
+    foreach my $d (@docs) {
+        my $tagged_text = $d->get_this_tag($code);
+        push @$result, { txt => $tagged_text, path => $d->file->relative($self->start_dir)};
+    }
+    return $result;
+}
+
 __PACKAGE__->meta->make_immutable;
 1;
