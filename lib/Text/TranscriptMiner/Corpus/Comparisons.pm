@@ -7,6 +7,8 @@ use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
 use Tree::Simple::Visitor::FindByPath;
+use File::Path qw/make_path/;
+use Path::Class;
 
 =head1 DESCRIPTION
 
@@ -165,7 +167,7 @@ sub get_results_for_node{
     my $terminal = pop @$path;
     my $branch = $self->get_this_branch($path);
     my @docs;
-    
+
     $branch->traverse(
         sub {
             my ($t) = @_;
@@ -175,9 +177,44 @@ sub get_results_for_node{
     my $result = [];
     foreach my $d (@docs) {
         my $tagged_text = $d->get_this_tag($code);
-        push @$result, { txt => $tagged_text, path => $d->file->relative($self->start_dir)};
+        my $file_path = $d->file->relative($self->start_dir);
+        push @$result,
+            { txt => $tagged_text,
+              path => $file_path,
+              notes => $self->get_notes($file_path, $code),
+          };
     }
     return $result;
+}
+
+sub get_notes {
+    my ($self, $path, $code) = @_;
+    my $notes_dir = $self->get_meta_start_dir->subdir('notes', $path);
+    make_path("$notes_dir") if ! -e $notes_dir;
+    my $notes_file = $notes_dir->file($code);
+    my $notes;
+    $notes = $notes_file->slurp() if -e $notes_file;
+    my $data = {};
+    my $status;
+    $status = 'pending' if ! $notes;
+    if ($notes) {
+        my $transcript_file_mtime = $self->start_dir->file($path)->stat->mtime;
+        my $notes_file_mtime = $notes_file->stat->mtime;
+        $status = 'outdated' if $notes_file_mtime < $transcript_file_mtime;
+    }
+    return { status => $status, notes => $notes};
+}
+
+sub write_notes {
+    my ($self, $file, $notes, $code) = @_;
+    $DB::single=1;
+    my $notes_dir = $self->get_meta_start_dir->subdir('notes', $file);
+    make_path("$notes_dir") if ! -e $notes_dir;
+    my $notes_file = $notes_dir->file($code);
+    $notes_file->touch if ! -e $notes_file;
+    my $FH = $notes_file->openw();
+    print $FH $notes;
+    return 'OK';
 }
 
 __PACKAGE__->meta->make_immutable;
