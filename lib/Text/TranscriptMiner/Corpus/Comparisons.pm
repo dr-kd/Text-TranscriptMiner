@@ -1,12 +1,14 @@
 package Text::TranscriptMiner::Corpus::Comparisons;
 use Moose;
 extends 'Text::TranscriptMiner::Corpus';
-
+use YAML;
+use Digest::MD5 qw/md5_hex/;
 use Tree::Simple::WithMetaData;
 use File::Basename;
 use Text::TranscriptMiner::CodeTree;
-use Scalar::Util qw/weaken/;
-use Data::Leaf::Walker;
+use Tree::Simple::Visitor::FindByPath;
+use File::Path qw/make_path/;
+use Path::Class;
 
 =head1 DESCRIPTION
 
@@ -93,6 +95,15 @@ sub _unique {
     return sort keys %names;
 }
 
+sub get_meta_start_dir {
+    my ($self) = @_;
+    my $startdir = $self->start_dir;
+    my $structure_file = basename("$startdir");
+    $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta");
+    die if ! -e $structure_file;
+    return $structure_file;
+}
+
 =head2 sub get_code_structure
 
 Given a file location (or C<<$self->start_dir ../[basename of start_dir]_meta>>
@@ -105,9 +116,7 @@ this analysis run via Text::TranscriptMiner::CodeTree
 sub get_code_structure {
     my ($self, $structure_file) = @_;
     if (!$structure_file) {
-        my $startdir = $self->start_dir;
-        $structure_file = basename("$startdir");
-        $structure_file = $self->start_dir->parent->subdir("${structure_file}_meta")->file("questions.txt");
+        $structure_file = $self->get_meta_start_dir->file('questions.txt');
     }
     die ("no file for codes structure") unless -e $structure_file;
     my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file);
@@ -135,83 +144,77 @@ slots populated for the report
 
 sub make_comparison_report_tree {
     my ($self, $groups, $code_file) = @_;
-    my $doctree = $self->doctree;
+    $code_file ||= $self->get_meta_start_dir->file('questions.txt');
     $groups ||= $self->groups;
-    my $test_groups = [];
-    my $report_tree = $self->get_code_structure($code_file);
-    my %groups_struct = $self->_get_groups_data_structure;
-    $report_tree->traverse( sub {
-                                my ($t) = @_;
-                                $self->_insert_txt_for_node(\%groups_struct, $t);
 
-                            });
-    
-    return $test_groups;
-    # return $tree
+    my $report_tree = $self->get_code_structure($code_file);
+    my $doctree = $self->doctree;
+    return $report_tree;
 }
 
-=head2 sub _get_groups_data_structure()
+=head2 sub get_results_for_node($path)
 
-Get the data structure for gluing onto the end of each node of the code tree
-for countaining the actual data we're eventually interested in.
+Given a path of the following format:
 
-=head2 IMPORTANT
-
-This section of code in this method that does the work (the C<$inject> and
-C<$visit> while clever is a bit fragile.  At present this means that we remove
-all C<children> keys in the C<_insert_txt_for_node> method.  This may need to
-be fixed with better code Possibly L<CPS|http://search.cpan.org/perldoc?CPS>
-can help with this kind of recursive descent problem.
-
+[ code_name, (path down dir tree), (match for terminal node) ] return the text
+for that node as an array ref.
 
 =cut
 
-sub _get_groups_data_structure {
-    my ($self, $groups ) = @_;
-    $groups ||= $self->groups;
+sub get_results_for_node{
+    my ($self, $path) = @_;
+    my $code = shift @$path;
+    my $terminal = pop @$path;
+    my $branch = $self->get_this_branch($path);
+    my @docs;
 
-    ## this implementation courtesy of ribasushi.  Must acknowledge in the
-    ## paper.
-    my %leaf;
-    @leaf{@{$groups->[$#{$groups}]}} = '';
-
-    my $inject = {
-        -1 => \%leaf,
-        0 => \%leaf,
-        1 => \%leaf,
-    };
-
-    my ($visit, $v);
-    $v = $visit = sub {  # get $visit in scope through a hack.  Could use
-                         # Sub::Current instead.  Might want to do this in the
-                         # situation that this code is called in a more complex
-                         # situation.
-        $_[0] ||= 0;
-        +{ map
-               {
-                   $_ => $inject->{$_[0]}
-                       ? { %{$inject->{$_[0]}}, children => $visit->($_[0]+1) }
-                       : $_[0] == @$groups
-                           ? $visit->($_[0]+1)
-                           : $inject->{-1}
-                       }
-                   @{$groups->[$_[0]]}
-               };
-    };
-
-    weaken($visit); # without this we have a memory leak
-    my $data_tree = $visit->();
-    return %$data_tree;
-};
-
-sub _insert_txt_for_node {
-    my ($self, $node_data, $t) = @_;
-    my $walker = Data::Leaf::Walker->new($node_data);
-    while (my ($k, $v) = $walker->each) {
-        @$k = grep { $_ ne 'children'} @$k;
-        my $path = join "/", @$k;
-        warn "PATH: $path\n";
+    $branch->traverse(
+        sub {
+            my ($t) = @_;
+            push @docs, $t->fetchMetaData('interview')
+                if $t->getNodeValue =~ /(^|_|\.)$terminal(_|\.)/;
+        }) if $branch;
+    my $result = [];
+    foreach my $d (@docs) {
+        my $tagged_text = $d->get_this_tag($code);
+        my $file_path = $d->file->relative($self->start_dir);
+        push @$result,
+            { txt => $tagged_text,
+              path => $file_path,
+              notes => $self->get_notes($file_path, $code),
+          };
     }
+    return $result;
+}
+
+sub get_notes {
+    my ($self, $path, $code) = @_;
+    my $notes_dir = $self->get_meta_start_dir->subdir('notes', $path);
+    make_path("$notes_dir") if ! -e $notes_dir;
+    my $notes_file = $notes_dir->file($code);
+    my $notes;
+    $notes = $notes_file->slurp() if -e $notes_file;
+    my $data = {};
+    my $status;
+    $status = 'pending' if ! $notes;
+    if ($notes) {
+        my $transcript_file_mtime = $self->start_dir->file($path)->stat->mtime;
+        my $notes_file_mtime = $notes_file->stat->mtime;
+        $status = 'outdated' if $notes_file_mtime < $transcript_file_mtime;
+    }
+    return { status => $status, notes => $notes};
+}
+
+sub write_notes {
+    my ($self, $file, $notes, $code) = @_;
+    $DB::single=1;
+    my $notes_dir = $self->get_meta_start_dir->subdir('notes', $file);
+    make_path("$notes_dir") if ! -e $notes_dir;
+    my $notes_file = $notes_dir->file($code);
+    $notes_file->touch if ! -e $notes_file;
+    my $FH = $notes_file->openw();
+    print $FH $notes;
+    return 'OK';
 }
 
 __PACKAGE__->meta->make_immutable;

@@ -6,10 +6,13 @@ use MooseX::Types::Moose qw/Str/;
 use aliased 'Text::TranscriptMiner::Document::Interview';
 use Path::Class;
 use aliased 'Tree::Simple::Visitor::LoadDirectoryTree';
-use Tree::Simple;
+use Tree::Simple::WithMetaData;
 use Tree::Simple::Visitor::PathToRoot;
+use aliased 'Tree::Simple::Visitor::FindByPath';
 use List::MoreUtils qw/all/;
 use Carp;
+use File::Find;
+use List::Util qw/max/;
 use aliased 'Text::TranscriptMiner::Document::Interview';
 
 class_type CorpusDir, { class => 'Path::Class::Dir'} ;
@@ -22,7 +25,7 @@ Represents a corpus of transcripts
 =head2 ATTRIBUTES
 
 start_dir (required Path::Class::Dir object or string)
-doctree (hashref created from start_dir)
+doctree (Tree::Simple::WithMetaData created from start_dir)
 
 =head2 METHODS
 
@@ -34,7 +37,7 @@ has start_dir  => (isa => CorpusDir,
                    is => 'ro',
                    coerce => 1,
                    required => 1);
-has doctree    => (isa => 'Tree::Simple',
+has doctree    => (isa => 'Tree::Simple::WithMetaData',
                    is => 'ro',
                    lazy_build => 1);
 has pathfinder => (isa => 'Tree::Simple::Visitor::PathToRoot',
@@ -47,15 +50,15 @@ has pathfinder => (isa => 'Tree::Simple::Visitor::PathToRoot',
 
 =head3 _build_doctree
 
-creates a hashref with the following structure:
+creates a Tree::Simple::WithMetaData of the document tree.
 
-...
+
 
 =cut
 
 sub _build_doctree {
     my ($self) = @_;
-    my $tree = Tree::Simple->new($self->start_dir);
+    my $tree = Tree::Simple::WithMetaData->new($self->start_dir);
     my $visitor = LoadDirectoryTree->new();
     $visitor->setSortStyle($visitor->SORT_FILES_FIRST);
     $visitor->setNodeFilter(
@@ -65,7 +68,45 @@ sub _build_doctree {
             return 1;
         });
     $tree->accept($visitor);
+    $tree->traverse(sub {
+                        my ($_t) = @_;
+                        if ($_t->isRoot()) {
+                            $_t->addMetaData('most_recent_mtime' => $self->get_most_recent_mtime());
+                        }
+                        $_t->accept($self->pathfinder);
+                        my $file = Path::Class::Dir->new($self->start_dir)
+                            ->file($self->pathfinder->getPathAsString('/'));
+                        my $path = $self->pathfinder->getPath();
+                        $path ||= [];
+                        $_t->addMetaData(path => $path);
+                        if (-f $file && -e $file) {
+                            my $interview = Interview->new({file => $file});
+                            $_t->addMetaData(interview => $interview,
+                                             file => $file,
+                                         );
+                        }
+                    });
     return $tree;
+}
+
+=head2 get_most_recent_mtime
+
+Find the mtime for the most recently modified file in the doctree
+
+=cut
+
+sub get_most_recent_mtime {
+    my ($self) = @_;
+    my $start_dir = $self->start_dir;
+    my @mtimes;
+    find ( sub {
+               my $file = $_;
+               return unless $_ =~ /.txt$/;
+               $file = $self->start_dir->file($file);
+               return if ! -e $file;
+               push @mtimes, $file->stat->mtime;
+           }, "$start_dir");
+    return max(@mtimes);
 }
 
 =head2 get_files_info
@@ -102,10 +143,7 @@ sub get_subnodes {
     $node ||= $self->doctree;
     $data ||= [];
     foreach my $n ($node->getAllChildren) {
-        $node->accept($self->pathfinder);
-        my $col = $self->pathfinder->getPathAsString('/') . '/' . $n->getNodeValue;
-        $col =~ s/^\///;
-        push @$data, $col;
+        push @$data, $n;
         if ($node->getAllChildren) {
             $self->get_subnodes($n, $data);
         }
@@ -160,13 +198,21 @@ sub get_all_tags_for_interviews {
     my @docs = $self->get_interviews($self->start_dir, \@files);
     my %tags;
     foreach (@docs) {
-        $DB::single=1;
         my %this_tags = %{$_->get_all_tags()};
         foreach my $k (keys %this_tags) {
             $tags{$k} += $this_tags{$k}
         }
     }
     return \%tags;
+}
+
+sub get_this_branch {
+    my ($self, $path) = @_;
+    my $visitor = FindByPath->new();
+    $visitor->includeTrunk(0);
+    $visitor->setSearchPath(@$path);
+    $self->doctree->accept($visitor);
+    return $visitor->getResult();
 }
 
 __PACKAGE__->meta->make_immutable;
