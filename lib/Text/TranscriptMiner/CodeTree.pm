@@ -28,7 +28,8 @@ Get the location from a Path::Class::File object or a string
 =cut
 
 sub get_code_tree {
-    my ($self, $structure_file) = @_;
+    my ($self, $structure_file, $tags) = @_;
+    $tags ||= {};
     carp "no file for code tree structure" if ! $structure_file;
 
     # now generate the tree with slots for metadata.
@@ -47,6 +48,7 @@ sub get_code_tree {
         $pos ||='';
         $pos = length($pos);
         $code = $name if ! $code;
+        delete $tags->{$code} if exists $tags->{$code};
         my $newnode = Tree::Simple::WithMetaData->new($code);
         $newnode->addMetaData( description => $name,
                                data => { } );
@@ -81,6 +83,12 @@ sub get_code_tree {
         # track position in the tree for next run.
         $node = $newnode;
         $oldlength = $pos;
+    }
+    foreach my $t (keys %$tags) {
+        $DB::single=1;
+        my $node = Tree::Simple::WithMetaData->new($t);
+        $node->addMetaData(description => $t, data => {});
+        $tree->addChild($node);
     }
     return $tree;
 }

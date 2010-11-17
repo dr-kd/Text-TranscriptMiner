@@ -114,12 +114,13 @@ this analysis run via Text::TranscriptMiner::CodeTree
 =cut
 
 sub get_code_structure {
-    my ($self, $structure_file) = @_;
+    my ($self, $structure_file, $tags) = @_;
+    $tags ||={};
     if (!$structure_file) {
         $structure_file = $self->get_meta_start_dir->file('questions.txt');
     }
     die ("no file for codes structure") unless -e $structure_file;
-    my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file);
+    my $tree = Text::TranscriptMiner::CodeTree->get_code_tree($structure_file, $tags);
     return $tree;
 }
 
@@ -178,14 +179,23 @@ sub get_results_for_node{
     foreach my $d (@docs) {
         my $tagged_text = $d->get_this_tag($code);
         my $file_path = $d->file->relative($self->start_dir);
-        push @$result,
-            { txt => $tagged_text,
-              path => $file_path,
-              notes => $self->get_notes($file_path, $code),
-          };
+        if (@$tagged_text) {
+            push @$result,
+                { txt => $tagged_text,
+                  path => $file_path,
+                  notes => $self->get_notes($file_path, $code),
+              };
+        }
     }
     return $result;
 }
+
+
+=head2 get_notes($path, $code)
+
+get the notes off the filesystem for this path and code.
+
+=cut
 
 sub get_notes {
     my ($self, $path, $code) = @_;
@@ -207,7 +217,6 @@ sub get_notes {
 
 sub write_notes {
     my ($self, $file, $notes, $code) = @_;
-    $DB::single=1;
     my $notes_dir = $self->get_meta_start_dir->subdir('notes', $file);
     make_path("$notes_dir") if ! -e $notes_dir;
     my $notes_file = $notes_dir->file($code);

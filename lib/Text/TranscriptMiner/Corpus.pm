@@ -194,7 +194,11 @@ sub get_all_tags_for_interviews {
     my ($self, $doctree) = @_;
     $doctree ||= $self->doctree;
     my $data = $self->get_subnodes;
-    my @files = grep { -f $self->start_dir->file($_) } @$data;
+    my @files;
+    foreach my $node (@$data) {
+        my $file = $self->start_dir->file(@{$node->fetchMetaData('path')})->relative($self->start_dir);
+        push @files, $file if -f $self->start_dir->file($file);
+    }
     my @docs = $self->get_interviews($self->start_dir, \@files);
     my %tags;
     foreach (@docs) {
