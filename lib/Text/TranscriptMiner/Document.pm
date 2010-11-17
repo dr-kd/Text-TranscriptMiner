@@ -60,13 +60,13 @@ sub get_tagged_txt {
     my ($self, $tag, $txt) = @_;
     croak "Need to supply a tag" if ! $tag;
     my $tags = $self->get_all_tags;
-    $txt = $self->txt if ! $txt;
+    $txt ||= $self->txt;
     if (! exists $tags->{$tag}) {
         warn "Tag \"$tag\" is not present in " . $self->file . "\n";
         return undef;
     }
     else {
-        return $self->get_this_tag($tag);
+        return $self->get_this_tag($tag, $txt);
     }
 }
 
@@ -79,8 +79,8 @@ tag as the value
 
 sub get_all_tags {
     my ($self, $txt) = @_;
-    $txt = $self->txt if ! $txt;
-    my (@tagged_txt) = $txt =~ /\{(\w:\w+)\}/msg;
+    $txt ||= $self->txt;
+    my (@tagged_txt) = $txt =~ /\{\/(.*?)\}/msg; # just count by closing tag
     my %tagged_txt;
     $tagged_txt{$_}++ for @tagged_txt;
     return \%tagged_txt;
@@ -95,7 +95,7 @@ documentation for L<get_tagged_txt>.
 
 sub get_this_tag {
     my ($self, $tag, $txt) = @_;
-    $txt = $self->txt if ! $txt;
+    $txt ||= $self->txt;
     my (@tagged_txt) = $txt =~ /({$tag}.*?{\/$tag})/sg;
     return \@tagged_txt;
 }
